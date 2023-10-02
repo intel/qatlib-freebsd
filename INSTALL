@@ -1,0 +1,320 @@
+===============================================================================
+
+
+September 2023
+===============================================================================
+
+
+Overview
+=========
+
+Intel® QuickAssist Technology provides security and compression acceleration
+capabilities used to improve performance and efficiency across the data center.
+
+Previously existing build system has been replaced by Autotools solution
+in order to provide with the widely known and easy to use tool to build and
+install source packages.
+
+===============================================================================
+
+
+Licensing
+=========
+
+This product is released under the BSD-3-Clause License.
+
+Files within this project have various inbound licences, listed below:
+        - Dual BSD/GPLv2 License
+        - BSD License
+
+This package also links against files with the following licenses:
+        - OpenSSL License
+        - ZLIB License
+
+For BSD-3-Clause license, please see the file LICENSE contained in the top
+level folder.
+For Dual BSD/GPLv2 please see the file headers of the relevant files.
+
+===============================================================================
+
+
+Using the QATlib package
+========================
+
+    Note: Instructions assume running on at least FreeBSD 14.0 and root user.
+
+
+Check System Prerequisites
+==========================
+
+    There are some prerequisites to running the software in this package. If
+    running from a distro many of these are taken care of, if not here they
+    are:
+
+     * platform must have one of the following Intel® Communications devices:
+        4xxx  : Use "pciconf -l | grep 0x4940" to check Physical Function (PF)
+                devices are present.
+        4xxx  : Use "pciconf -l | grep 0x4941" to check VF devices have been created.
+
+     * kernel driver must be running
+        Use "kldstat | grep qat" to check that these kernel modules are running:
+        qat_common.ko
+        qat_hw.ko
+	qat.ko
+	qat_4xxx_fw.ko
+
+===============================================================================
+
+
+Compilation and installation - quickstart instructions
+======================================================
+
+    Note, more detailed instructions in following section.
+
+    ---------------------------------------------------------------------------
+
+    Summary if building from sources.
+
+        # Install dependencies
+        pkg install automake autoconf libtool yasm
+
+        # Clone QATlib into ~/qatlib-freebsd, i.e. in your root home dir
+        cd ~
+        git clone https://github.com/intel/qatlib-freebsd.git
+        # If instead you upgrade an earlier clone, follow the steps in
+        # "Remove the libraries and cleanup" before fetching.
+
+        # Build and install library
+        cd qatlib-freebsd
+        ./autogen.sh
+        ./configure
+        make [-j max_jobs]
+        make install
+
+        # The library is now ready to use with your application
+
+        # You can also follow these steps to try out a sample application:
+
+        # Compression sample code expects to find data files at a known location,
+        # so call the samples-install target to put them there
+        cd qatlib-freebsd
+        make samples-install
+
+        # Run it! (takes several minutes to complete)
+        cpa_sample_code
+
+        # No need to leave the samples installed, so cleanup
+        make samples-uninstall
+
+===============================================================================
+
+
+Compilation and installation - detailed instructions
+====================================================
+
+    1) Install compilation dependencies
+
+        tools:
+            clang
+            make
+            autotools (automake, autoconf, libtool)
+            yasm
+
+        libraries:
+            openssl
+            zlib
+
+    ----------------------------------------------------------------------------
+
+    2) Download package and configure it
+
+        To generate configure script - call:
+            ./autogen.sh
+
+        To setup the default build configuration - call:
+            ./configure
+
+        Full list of configuration options can be found under
+        "Configuration options" section below or by calling:
+            ./configure --help
+
+    ----------------------------------------------------------------------------
+
+    3) Compile and install the library
+
+        Build and install:
+            make [-j max_jobs]
+            make install
+
+    ----------------------------------------------------------------------------
+
+    4) Run sample application
+
+        Sample code is built by default.
+        Information on running the performance sample-code is at
+        ./quickassist/lookaside/access_layer/src/sample_code/README.txt
+
+        Examples:
+            Compression sample code expects to find data files at a known
+            location, so call the samples-install target to put them there:
+            make samples-install
+
+            Run all performance tests:
+            ./cpa_sample_code
+
+            Symmetric crypto tests only:
+            ./cpa_sample_code runTests=1
+
+            Asymmetric crypto RSA tests only:
+            ./cpa_sample_code runTests=2
+
+            Compression tests only:
+            ./cpa_sample_code runTests=32
+
+        Examples of other samples for a specific functionality:
+            Run just one symmetric cipher operation:
+            ./cipher_sample
+
+            Run just one compress/decompress operation:
+            ./dc_stateless_sample
+
+    ----------------------------------------------------------------------------
+
+    5) Remove the libraries and cleanup
+
+        Note: These make commands should be run using the Makefiles that were
+        generated by the original call to the configure script. I.e. there is
+        no need to call ./configure again. If it is ever called again it must
+        be called with exactly the same options as were originally used so
+        whatever was installed can be correctly cleaned up.
+
+        Uninstall:
+            make samples-uninstall #if samples installed
+            make uninstall
+
+        Clean up:
+            make clean
+            make distclean
+
+===============================================================================
+
+
+Full list of Configuration options
+==================================
+
+    Typical examples of how to update configuration options are as follows:
+
+                ./configure ICP_ANY_FLAG=value or
+                ./configure --enable-something
+
+    If it is required to use more than one flag at once:
+
+                ./configure ICP_ANY_PATH=path ICP_ANY_NAME=name --enable-something
+
+    Features flags:
+        Enables or disables the additional features supported by 4xxx package
+
+        --disable-option-checking
+                Ignores unrecognized configure options when run along with it.
+
+        --disable-FEATURE
+                Does not include FEATURE (same as --enable-FEATURE=no).
+
+        --enable-FEATURE[=ARG]
+                Includes FEATURE [ARG=yes].
+
+        --enable-silent-rules
+                Less verbose build output (undo: "make V=1").
+
+        --disable-silent-rules
+                Verbose build output (undo: "make V=0").
+
+        --enable-maintainer-mode
+                Enables make rules and dependencies not useful (and
+                sometimes confusing) to the casual installer.
+
+        --enable-dependency-tracking
+                Does not reject slow dependency extractors.
+
+        --disable-dependency-tracking
+                Speeds up one-time build
+
+        --enable-icp-debug
+                Enables debugging.
+
+        --disable-param-check
+                Disables parameters checking in the top-level APIs
+                (Use for performance optimization).
+
+        --disable-stats
+                Disables statistic collection (Use for performance optimization).
+
+        --enable-icp-log-syslog
+                Enables debugging messages to be outputted to the
+                system log instead of standard output.
+
+        --enable-icp-trace
+                Enables tracing for the Cryptography API.
+
+        --enable-dc-error-simulation
+                Enables Data Compression Error Simulation.
+
+        --enable-legacy-lib-names
+                Enables legacy names for libraries.
+
+        --enable-legacy-algorithms
+                Enable deprecated legacy crypto algorithms. See the README.md for the
+                list of algorithms which are deprecated by default.
+        MAX_MR
+                Number of Miller Rabin rounds for prime operations. Setting this
+                to a smaller value reduces the memory usage required by the
+                driver.
+
+                Type: value
+                Default value: 50
+
+
+===============================================================================
+
+
+Common issues
+=============
+
+    Issue: On running sample code:
+        qaeMemInit started
+        ADF_UIO_PROXY err: icp_adf_userProcessToStart: Failed to start SSL...
+    Likely cause: (1) No PF driver available. Check that PFs are available and
+        loaded:
+	See "Check System Prerequisites" section of this document.
+
+        (2) No VFs available. Check VFs are available and driver is loaded:
+	See "Check System Prerequisites" section of this document.
+
+    Issue: "Could not open corpus file: /usr/local/share/qat/calgary"
+        seen when running compression sample code.
+    Likely cause: sample code data files not installed at the expected location
+        Run: make samples-install
+
+===============================================================================
+
+
+Legal/Disclaimers
+===================
+
+INFORMATION IN THIS DOCUMENT IS PROVIDED IN CONNECTION WITH INTEL(R) PRODUCTS.
+NO LICENSE, EXPRESS OR IMPLIED, BY ESTOPPEL OR OTHERWISE, TO ANY INTELLECTUAL
+PROPERTY RIGHTS IS GRANTED BY THIS DOCUMENT. EXCEPT AS PROVIDED IN INTEL'S
+TERMS AND CONDITIONS OF SALE FOR SUCH PRODUCTS, INTEL ASSUMES NO LIABILITY
+WHATSOEVER, AND INTEL DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTY, RELATING TO
+SALE AND/OR USE OF INTEL PRODUCTS INCLUDING LIABILITY OR WARRANTIES RELATING
+TO FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABILITY, OR INFRINGEMENT OF ANY
+PATENT, COPYRIGHT OR OTHER INTELLECTUAL PROPERTY RIGHT. Intel products are
+not intended for use in medical, life saving, life sustaining, critical control
+ or safety systems, or in nuclear facility applications.
+
+Intel may make changes to specifications and product descriptions at any time,
+without notice.
+
+(C) Intel Corporation 2023
+
+===============================================================================
