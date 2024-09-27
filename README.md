@@ -7,6 +7,7 @@
   - [Revision History](#revision-history)
   - [Overview](#overview)
   - [Features](#features)
+  - [Insecure Algorithms](#insecure-algorithms)
   - [Deprecated Features \& Planned Deprecations](#deprecated-features--planned-deprecations)
   - [Setup](#setup)
   - [Supported Devices](#supported-devices)
@@ -43,11 +44,12 @@ sample codes.
 
 The following services are available in QATlib via the QuickAssist API:
 * Symmetric (Bulk) Cryptography
-  * Ciphers (AES-ECB, AES-CBC, AES-CTR (no partials support),
-    AES-XTS (no partials support), AES-GCM, AES-CCM (192/256)
-  * Message digest/hash (SHA1, SHA2 (224/256/384/512),
-    SHA3 (224/256/384/512) (no partials support) and
-    authentication (AES-CBC-MAC, AES-XCBC-MAC)
+  * Ciphers ([AES-ECB](#insecure-algorithms), AES-CBC, AES-CTR (no partials support),
+    AES-XTS (no partials support), AES-GCM, AES-CCM (192/256), [SM4-ECB](#insecure-algorithms),
+    SM4-CBC, SM4-CTR)
+  * Message digest/hash ([SHA1](#insecure-algorithms), SHA2 ([224](#insecure-algorithms)/256/384/512),
+    SHA3 ([224](#insecure-algorithms)/256/384/512) (no partials support), SM3) and
+    authentication (AES-CBC-MAC, AES-XCBC-MAC, AES-CMAC-128)
   * Algorithm chaining (one cipher and one hash in a single operation)
   * Authenticated encryption (CCM-128 (no partials support),
     GCM (128/192/256) (no partials support), GMAC (no partials support)
@@ -59,10 +61,10 @@ The following services are available in QATlib via the QuickAssist API:
   * MGF1
 * Asymmetric (Public Key) Cryptography
   * Modular exponentiation and modular inversion up to 8192 bits
-  * Diffie-Hellman (DH) key generation phase 1 and 2 up to 8192 bits
-  * RSA key generation, encryption/decryption and digital signature
+  * [Diffie-Hellman (DH)](#insecure-algorithms) key generation phase 1 and 2 up to 8192 bits
+  * [RSA](#insecure-algorithms) key generation, encryption/decryption and digital signature
     generation/verification up to 8192 bits
-  * DSA parameter generation and digital signature generation/verification
+  * [DSA](#insecure-algorithms) parameter generation and digital signature generation/verification
   * Elliptic Curve Cryptography: ECDSA, ECDHE, Edwards Montgomery curves
   * Generic point multiply
 * Compression
@@ -75,6 +77,21 @@ This package includes:
 * libqat: user space library for QAT devices exposed via the UIO kernel driver
 * libusdm: user space library and kernel space driver for memory management
 * Sample codes: applications to demo usage of the libs
+
+## Insecure Algorithms
+The following algorithms are considered insecure and are disabled by default.
+* AES-ECB
+* SHA-1
+* SHA2-224
+* SHA3-224
+* RSA512/1024/1536
+* DSA
+* Diffie-Helman
+* Elliptic Curve Cryptography algorithms with less 256 bits
+* SM4-ECB
+
+To enable these algorithms, use the following configuration option:
+   * `--enable-legacy-algorithms`
 
 ## Deprecated Features & Planned Deprecations
 * The following configuration option will be deprecated after 2023:
