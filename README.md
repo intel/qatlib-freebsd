@@ -8,7 +8,7 @@
   - [Overview](#overview)
   - [Features](#features)
   - [Insecure Algorithms](#insecure-algorithms)
-  - [Deprecated Features \& Planned Deprecations](#deprecated-features--planned-deprecations)
+  - [Deprecated Features & Planned Deprecations](#deprecated-features--planned-deprecations)
   - [Setup](#setup)
   - [Supported Devices](#supported-devices)
   - [Limitations](#limitations)
