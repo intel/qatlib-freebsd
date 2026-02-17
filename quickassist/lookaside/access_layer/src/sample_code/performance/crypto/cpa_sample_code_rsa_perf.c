@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -111,6 +59,7 @@
 #endif
 #include "qat_perf_cycles.h"
 #include "cpa_sample_code_framework.h"
+#include "cpa_dev.h"
 #ifdef USER_SPACE
 #if CY_API_VERSION_AT_LEAST(3, 0)
 #ifdef SC_KPT2_ENABLED
@@ -125,7 +74,6 @@
 */
 #define NUM_KEY_PAIRS (2)
 #define NUM_RSA_KEYGEN_RETRIES (1000)
-
 #ifdef POLL_INLINE
 Cpa32U asymPollingInterval_g = 0;
 EXPORT_SYMBOL(asymPollingInterval_g);
@@ -148,6 +96,17 @@ Cpa8U rsaPublicExponent_g[] = {0x01, 0x00, 0x01};
 // Cpa8U rsaPublicExponent_g[] = {0x11};
 extern Cpa32U packageIdCount_g;
 
+void sampleRsaThreadSetup(single_thread_test_data_t *testSetup);
+CpaStatus setupRsaBackpressureTest(Cpa32U numLoops);
+CpaStatus setAsymPollingInterval(Cpa64U pollingInterval);
+#if CY_API_VERSION_AT_LEAST(3, 0)
+#ifdef SC_KPT2_ENABLED
+void kpt2RsaCallback(void *pCallbackTag,
+                     CpaStatus status,
+                     void *pOpdata,
+                     CpaFlatBuffer *pOut);
+#endif
+#endif
 
 /******************************************************************************
  * @ingroup sampleRSACode
@@ -156,11 +115,11 @@ extern Cpa32U packageIdCount_g;
  * Callback for RSA KeyGen operations, we declare function signature as per the
  *  API but we only use the pCallbackTag parameter
  * ****************************************************************************/
-void rsaKeyGenCallback(void *pCallbackTag,
-                       CpaStatus status,
-                       void *pKeyGenOpData,
-                       CpaCyRsaPrivateKey *pPrivateKey,
-                       CpaCyRsaPublicKey *pPublicKey)
+static void rsaKeyGenCallback(void *pCallbackTag,
+                              CpaStatus status,
+                              void *pKeyGenOpData,
+                              CpaCyRsaPrivateKey *pPrivateKey,
+                              CpaCyRsaPublicKey *pPublicKey)
 {
     perf_data_t *pPerfData = (perf_data_t *)pCallbackTag;
 
@@ -189,10 +148,10 @@ void rsaKeyGenCallback(void *pCallbackTag,
  * Callback for RSA operations, we declare function signature as per the API
  * but we only use the pCallbackTag parameter
  * ****************************************************************************/
-void rsaCallback(void *pCallbackTag,
-                 CpaStatus status,
-                 void *pOpdata,
-                 CpaFlatBuffer *pOut)
+static void rsaCallback(void *pCallbackTag,
+                        CpaStatus status,
+                        void *pOpdata,
+                        CpaFlatBuffer *pOut)
 {
     processCallback(pCallbackTag);
 }
@@ -282,34 +241,12 @@ CpaStatus generateRSAKey(CpaInstanceHandle instanceHandle,
     CpaCyRsaKeyGenCbFunc rsaKeyGenCb = NULL;
 #ifdef POLL_INLINE
     CpaInstanceInfo2 *instanceInfo2 = NULL;
-    instanceInfo2 = qaeMemAlloc(sizeof(CpaInstanceInfo2));
-    if (instanceInfo2 == NULL)
-    {
-        PRINT_ERR("Failed to allocate memory for instanceInfo2");
-        return CPA_STATUS_FAIL;
-    }
-    memset(instanceInfo2, 0, sizeof(CpaInstanceInfo2));
 #endif
-
 
     if (SYNC == setup->syncMode)
     {
         rsaKeyGenCb = NULL;
     }
-#ifdef POLL_INLINE
-    if (poll_inline_g)
-    {
-        status = cpaCyInstanceGetInfo2(setup->cyInstanceHandle, instanceInfo2);
-        if (CPA_STATUS_SUCCESS != status)
-        {
-            PRINT_ERR("cpaCyInstanceGetInfo2 error, status: %d\n", status);
-            qaeMemFree((void **)&instanceInfo2);
-            return CPA_STATUS_FAIL;
-        }
-        rsaKeyGenCb = rsaKeyGenCallback;
-    }
-#endif
-
     /*allocate the public key modulus*/
     ALLOC_FLAT_BUFF_DATA(instanceHandle,
                          &(pPublicKey->modulusN),
@@ -318,12 +255,14 @@ CpaStatus generateRSAKey(CpaInstanceHandle instanceHandle,
                          0,
                          FREE_GENERATE_RSA_KEY_MEM());
     /*allocate and set the public exponent (e)*/
+
     ALLOC_FLAT_BUFF_DATA(instanceHandle,
                          &(pPublicKey->publicExponentE),
                          sizeof(rsaPublicExponent_g),
                          rsaPublicExponent_g,
                          sizeof(rsaPublicExponent_g),
                          FREE_GENERATE_RSA_KEY_MEM());
+
     /*setup private key data*/
     /*if key type is CPA_CY_RSA_PRIVATE_KEY_REP_TYPE_1 then kSize is the size of
      * the modulus, otherwise its half the modulus size */
@@ -333,14 +272,14 @@ CpaStatus generateRSAKey(CpaInstanceHandle instanceHandle,
         /*allocate space for the key data modulusN*/
         ALLOC_FLAT_BUFF_DATA(instanceHandle,
                              &(pPrivateKey->privateKeyRep1.modulusN),
-                             modulusLenInBytes,
+                             kSize,
                              NULL,
                              0,
                              FREE_GENERATE_RSA_KEY_MEM());
         /*allocate space for the key data privateExponentD*/
         ALLOC_FLAT_BUFF_DATA(instanceHandle,
                              &(pPrivateKey->privateKeyRep1.privateExponentD),
-                             modulusLenInBytes,
+                             kSize,
                              NULL,
                              0,
                              FREE_GENERATE_RSA_KEY_MEM());
@@ -448,6 +387,28 @@ CpaStatus generateRSAKey(CpaInstanceHandle instanceHandle,
     pPerfData->numOperations = SINGLE_OPERATION;
 
     sampleCodeSemaphoreInit(&pPerfData->comp, 0);
+
+#ifdef POLL_INLINE
+    instanceInfo2 = qaeMemAlloc(sizeof(CpaInstanceInfo2));
+    if (instanceInfo2 == NULL)
+    {
+        PRINT_ERR("Failed to allocate memory for instanceInfo2");
+        return CPA_STATUS_FAIL;
+    }
+    memset(instanceInfo2, 0, sizeof(CpaInstanceInfo2));
+    if (poll_inline_g)
+    {
+        status = cpaCyInstanceGetInfo2(setup->cyInstanceHandle, instanceInfo2);
+        if (CPA_STATUS_SUCCESS != status)
+        {
+            PRINT_ERR("cpaCyInstanceGetInfo2 error, status: %d\n", status);
+            qaeMemFree((void **)&instanceInfo2);
+            return CPA_STATUS_FAIL;
+        }
+        rsaKeyGenCb = rsaKeyGenCallback;
+    }
+#endif
+
         for (retry = 0; retry < NUM_RSA_KEYGEN_RETRIES; retry++)
         {
             status = cpaCyRsaGenKey(instanceHandle,
@@ -574,7 +535,6 @@ CpaStatus genKeyArray(asym_test_params_t *setup,
     CpaStatus status = CPA_STATUS_FAIL;
     Cpa32U bufferCount = 0;
     Cpa32U node = 0;
-
 
     status = sampleCodeCyGetNode(setup->cyInstanceHandle, &node);
     if (CPA_STATUS_SUCCESS != status)
@@ -739,7 +699,6 @@ CpaStatus rsaEncryptDataSetup(CpaFlatBuffer *pEncryptData[],
     Cpa32U bufferSize = setup->modulusSizeInBytes;
     Cpa32U node = 0;
 
-
     status = sampleCodeCyGetNode(setup->cyInstanceHandle, &node);
     if (CPA_STATUS_SUCCESS != status)
     {
@@ -840,7 +799,6 @@ CpaStatus rsaDecryptDataSetup(CpaFlatBuffer *pDecryptData[],
     Cpa32U bufferCount = 0;
     Cpa32U bufferSize = setup->modulusSizeInBytes;
     Cpa32U node = 0;
-
 
     status = sampleCodeCyGetNode(setup->cyInstanceHandle, &node);
     if (CPA_STATUS_SUCCESS != status)
@@ -1210,6 +1168,13 @@ CpaStatus sampleRsaEncrypt(asym_test_params_t *setup,
  * @ingroup sampleRSACode
  *
  * @description
+ * This functions performs RSA Encrypt using openssl library
+ *
+ * ****************************************************************************/
+/******************************************************************************
+ * @ingroup sampleRSACode
+ *
+ * @description
  * this function measures the performance of RSA Encrypt operations
  * It is assumed all the encrypt data and keys have been been set using
  * functions defined in this file
@@ -1279,7 +1244,7 @@ CpaStatus sampleRsaDecrypt(asym_test_params_t *setup,
             return CPA_STATUS_FAIL;
         }
         pKptUnwrapCtx =
-            qaeMemAllocNUMA(sizeof(CpaCyKptUnwrapContext) * setup->numBuffers,
+            qaeMemAllocNUMA(sizeof(CpaCyKptUnwrapContext *) * setup->numBuffers,
                             node,
                             BYTE_ALIGNMENT_64);
         if (NULL == pKptUnwrapCtx)
@@ -1314,6 +1279,8 @@ CpaStatus sampleRsaDecrypt(asym_test_params_t *setup,
         {
             PRINT_ERR("Failed to allocate memory for submission and"
                       " response times\n");
+            qaeMemFree((void **)&request_respnse_time);
+            qaeMemFree((void **)&request_submit_start);
             return CPA_STATUS_FAIL;
         }
         memset(request_submit_start, 0, request_mem_sz);
@@ -1467,7 +1434,10 @@ CpaStatus sampleRsaDecrypt(asym_test_params_t *setup,
 
 #endif
 
-    qaeMemFree((void **)&instanceInfo);
+    if (NULL != instanceInfo)
+    {
+        qaeMemFree((void **)&instanceInfo);
+    }
 
     /*this barrier will wait until all threads get to this point*/
     sampleCodeBarrier();
@@ -1500,34 +1470,35 @@ CpaStatus sampleRsaDecrypt(asym_test_params_t *setup,
 #ifdef USER_SPACE
 #if CY_API_VERSION_AT_LEAST(3, 0)
 #ifdef SC_KPT2_ENABLED
-                if (CPA_TRUE == setup->enableKPT)
-                {
-                    status =
-                        cpaCyKptRsaDecrypt(setup->cyInstanceHandle,
-                                           cbFunc,
-                                           setup->performanceStats,
-                                           ppKPTDecryptOpData[insideLoopCount],
-                                           ppOutputData[insideLoopCount],
-                                           pKptUnwrapCtx[insideLoopCount]);
-                    if (CPA_STATUS_FAIL == status)
+                    if (CPA_TRUE == setup->enableKPT)
                     {
-                        PRINT_ERR("KPT RSA Decrypt failed!\n");
+                        status = cpaCyKptRsaDecrypt(
+                            setup->cyInstanceHandle,
+                            cbFunc,
+                            setup->performanceStats,
+                            ppKPTDecryptOpData[insideLoopCount],
+                            ppOutputData[insideLoopCount],
+                            pKptUnwrapCtx[insideLoopCount]);
+                        if (CPA_STATUS_FAIL == status)
+                        {
+                            PRINT_ERR("KPT RSA Decrypt failed!\n");
+                        }
                     }
-                }
-                else
-                {
+                    else
+                    {
 #endif
 #endif /* CY_API_VERSION_AT_LEAST(3, 0) */
 #endif
-                    status = cpaCyRsaDecrypt(setup->cyInstanceHandle,
-                                             cbFunc,
-                                             setup->performanceStats,
-                                             ppDecryptOpData[insideLoopCount],
-                                             ppOutputData[insideLoopCount]);
+                        status =
+                            cpaCyRsaDecrypt(setup->cyInstanceHandle,
+                                            cbFunc,
+                                            setup->performanceStats,
+                                            ppDecryptOpData[insideLoopCount],
+                                            ppOutputData[insideLoopCount]);
 #ifdef USER_SPACE
 #if CY_API_VERSION_AT_LEAST(3, 0)
 #ifdef SC_KPT2_ENABLED
-                }
+                    }
 #endif
 #endif /* CY_API_VERSION_AT_LEAST(3, 0) */
 #endif
@@ -1845,7 +1816,7 @@ CpaStatus sampleRsaPerform(asym_test_params_t *setup)
     return status;
 }
 
-CpaStatus sampleRsaEncryptPerform(asym_test_params_t *setup)
+static CpaStatus sampleRsaEncryptPerform(asym_test_params_t *setup)
 {
     /* start of local variable declarations */
     CpaStatus status = CPA_STATUS_SUCCESS;
@@ -1961,6 +1932,7 @@ void sampleRsaThreadSetup(single_thread_test_data_t *testSetup)
     CpaInstanceHandle *cyInstances = NULL;
     asym_test_params_t *params = (asym_test_params_t *)testSetup->setupPtr;
     CpaInstanceInfo2 *instanceInfo = NULL;
+
 #ifdef SC_DEV_INFO_ENABLED
     CpaDeviceInfo deviceInfo = {0};
 #endif
@@ -2033,7 +2005,8 @@ void sampleRsaThreadSetup(single_thread_test_data_t *testSetup)
 
 #ifdef SC_DEV_INFO_ENABLED
     /* check whether asym service enabled or not for the instance */
-    status = cpaGetDeviceInfo(instanceInfo->physInstId.packageId, &deviceInfo);
+    status =
+        cpaGetDeviceInfo(instanceInfo->physInstId.acceleratorId, &deviceInfo);
     if (CPA_STATUS_SUCCESS != status)
     {
         PRINT_ERR("%s::%d cpaGetDeviceInfo failed", __func__, __LINE__);
@@ -2066,7 +2039,6 @@ void sampleRsaThreadSetup(single_thread_test_data_t *testSetup)
     rsaTestSetup.enableKPT = params->enableKPT;
 #endif
 #endif
-
 
     /*launch function that does all the work*/
     if (params->performEncrypt)

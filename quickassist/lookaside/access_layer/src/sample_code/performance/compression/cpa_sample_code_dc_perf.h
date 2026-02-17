@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -102,6 +50,12 @@
       CPA_DC_API_VERSION_NUM_MINOR >= minor))
 #endif
 
+#ifndef DC_API_VERSION_LESS_THAN
+#define DC_API_VERSION_LESS_THAN(major, minor)                                 \
+    (CPA_DC_API_VERSION_NUM_MAJOR < major ||                                   \
+     (CPA_DC_API_VERSION_NUM_MAJOR == major &&                                 \
+      CPA_DC_API_VERSION_NUM_MINOR < minor))
+#endif
 /* Dynamic number of buffers to be created while initializing the Compression
  * session
  */
@@ -110,12 +64,17 @@
 /* Extra buffer */
 #define EXTRA_BUFFER (2)
 #define MIN_DST_BUFFER_SIZE (8192)
-#if defined(SC_WITH_QAT20) || defined(SC_WITH_QAT20_UPSTREAM)
-#define MIN_DST_BUFFER_SIZE_GEN4 (1024)
+#ifdef SC_WITH_GEN4
+#define MIN_DST_BUFFER_SIZE_GEN4 (1026)
 #endif
 #define DEFAULT_INCLUDE_LZ4 (0)
 #define DEFAULT_COMPRESSION_LOOPS (100)
-#define DEFAULT_COMPRESSION_WINDOW_SIZE (7)
+#if DC_API_VERSION_LESS_THAN(1, 6)
+    #define DEFAULT_COMPRESSION_WINDOW_SIZE (7)
+#endif
+#if DC_API_VERSION_AT_LEAST(3, 1)
+    #define DEFAULT_COMPRESSION_WINDOW_SIZE (0)
+#endif
 #define INITIAL_RESPONSE_COUNT (-1)
 #define SCALING_FACTOR_100 (100)
 #define SCALING_FACTOR_1000 (1000)
@@ -147,11 +106,16 @@
 /* the following are defined in the framework, these are used for setup only
  * and are not to be used in functions not thread safe
  */
-
-extern Cpa8U thread_setup_g[MAX_THREAD_VARIATION]
-                           [MAX_SETUP_STRUCT_SIZE_IN_BYTES];
+#ifdef USER_SPACE
+extern Cpa8U (*thread_setup_g)[MAX_SETUP_STRUCT_SIZE_IN_BYTES];
+extern thread_creation_data_t *testSetupData_g;
+extern sample_code_thread_t *threads_g;
+#else
+extern Cpa8U thread_setup_g[MAX_THREAD_VARIATION][MAX_SETUP_STRUCT_SIZE_IN_BYTES];
+extern thread_creation_data_t testSetupData_g[MAX_THREAD_VARIATION];
+extern sample_code_thread_t threads_g[MAX_THREADS];
+#endif
 extern Cpa32U testTypeCount_g;
-extern thread_creation_data_t testSetupData_g[];
 
 /**
  * *****************************************************************************
@@ -285,6 +249,8 @@ typedef struct compression_test_params_s
     Cpa32U numRequests;
     /* Array of buffers required, indexed by corpus file number */
     Cpa32U *numberOfBuffers;
+    /* Array of SGLs required, indexed by corpus file number */
+    Cpa32U *numberOfSGLs;
     /* Unique thread ID based on the order in which the thread was created */
     Cpa32U threadID;
     /* identifies if Data Plane API is used */
@@ -326,14 +292,26 @@ typedef struct compression_test_params_s
 #endif
     /*the logicalQaInstance for the cipher to use*/
     Cpa32U logicalQaInstance;
-#if (defined SC_CHAINING_EXT_ENABLED ||                                        \
-     (DC_API_VERSION_AT_LEAST(3, 2) && defined(SC_WITH_QAT20)))
+#if defined(SC_WITH_QAT20) || defined(SC_WITH_QAT20_UPSTREAM)
+#if DC_API_VERSION_AT_LEAST(3, 2)
+#if !defined(SC_BSD_UPSTREAM)
     /**<The Crc control data used for this session's data integrity
      * computations  */
     CpaCrcControlData dcSessionCrcControlData;
     /**<The Crc control data used for this session's data integrity
      * computations  */
     CpaCrcControlData cySessionCrcControlData;
+#endif
+#endif
+#else
+#if defined SC_CHAINING_EXT_ENABLED
+    /**<The Crc control data used for this session's data integrity
+     * computations  */
+    CpaCrcControlData dcSessionCrcControlData;
+    /**<The Crc control data used for this session's data integrity
+     * computations  */
+    CpaCrcControlData cySessionCrcControlData;
+#endif
 #endif
     /*stores the setup data thread running symmetric operations*/
     CpaCySymSessionSetupData symSetupData;
@@ -344,11 +322,17 @@ typedef struct compression_test_params_s
     qat_dc_e2e_t *e2e;
     CpaBoolean disableAdditionalCmpbufferSize;
 #if DC_API_VERSION_AT_LEAST(3, 2)
+#ifdef SC_WITH_GEN4
+    /*flag to set (NS)Sessionless compression/decompression Request*/
+    CpaBoolean setNsRequest;
+#endif
 #endif
     CpaDcSessionHandle *pSessionHandle;
     /* the Destination Buffer size obtained using
      * Compress Bound API, for Compress operation */
     Cpa32U dcDestBufferSize;
+    CpaBoolean isUseSGL;
+    Cpa32U numFlatsPerSGL;
 } compression_test_params_t;
 
 /**
@@ -483,7 +467,7 @@ CpaStatus dcPerform(compression_test_params_t *setup);
  *  @param[in]  compLevel compression Level
  *  @param[in]  state stateful operation or stateless operation
  *  @param[in]  testBuffersize size of the flat Buffer to use
- *  @parma[in]  corpusType type of corpus calgary/cantrbury corpus
+ *  @param[in]  corpusType type of corpus calgary/cantrbury corpus
  *  @param[in]  syncFlag synchronous/Asynchronous operation
  *  @param[in]  minMatch size that will be used for the search algorithm.
  *  It is only configurable for LZ4S
@@ -522,7 +506,7 @@ CpaStatus setupDcLZ4Test(CpaDcCompType algorithm,
  *  @param[in]  state stateful operation or stateless operation
  *  @param[in]  windowSize window size to be used for compression/decompression
  *  @param[in]  testBuffersize size of the flat Buffer to use
- *  @parma[in]  corpusType type of corpus calgary/cantrbury corpus
+ *  @param[in]  corpusType type of corpus calgary/cantrbury corpus
  *  @param[in]  syncFlag synchronous/Asynchronous operation
  *  @param[in]  numloops Number of loops to compress or decompress
  ******************************************************************************/
@@ -536,7 +520,6 @@ CpaStatus setupDcTest(CpaDcCompType algorithm,
                       corpus_type_t corpusType,
                       sync_mode_t syncFlag,
                       Cpa32U numLoops);
-
 
 #ifdef SC_CHAINING_ENABLED
 /**
@@ -583,7 +566,7 @@ CpaStatus qatDcChainPerform(compression_test_params_t *setup);
  *  @param[in]  windowSize         window size to be used for
  *compression/decompression
  *  @param[in]  testBuffersize     size of the flat Buffer to use
- *  @parma[in]  corpusType         type of corpus calgary/cantrbury corpus
+ *  @param[in]  corpusType         type of corpus calgary/cantrbury corpus
  *  @param[in]  syncFlag           synchronous/Asynchronous operation
  *  @param[in]  opType             operation type
  *  @param[in]  cipherAlg          Indicates cipher algorithms and modes
@@ -664,7 +647,7 @@ CpaStatus setupDcChainExtTest(CpaDcChainOperations chainOperation,
  *  @param[in]  state stateful operation or stateless operation
  *  @param[in]  windowSize window size to be used for compression/decompression
  *  @param[in]  testBuffersize size of the flat Buffer to use
- *  @parma[in]  corpusType type of corpus calgary/cantrbury corpus
+ *  @param[in]  corpusType type of corpus calgary/cantrbury corpus
  *  @param[in]  syncFlag synchronous/Asynchronous operation
  *  @param[in]  numloops Number of loops to compress or decompress
  ******************************************************************************/
@@ -768,7 +751,6 @@ void freeBuffers(CpaBufferList ***pBuffListArray,
 CpaStatus compareBuffers(CpaBufferList ***ppSrc,
                          CpaBufferList ***ppDst,
                          compression_test_params_t *setup);
-
 
 /**
  * *****************************************************************************

@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -103,7 +51,7 @@ extern "C" {
  *      cpaCySymRemoveSession has completed successfully.
  *
  *****************************************************************************/
-typedef void * CpaCySymSessionCtx;
+typedef void *CpaCySymSessionCtx;
 
 /**
  *****************************************************************************
@@ -153,7 +101,7 @@ typedef enum _CpaCySymPacketType
  *****************************************************************************/
 typedef enum _CpaCySymOp
 {
-    CPA_CY_SYM_OP_NONE=0,
+    CPA_CY_SYM_OP_NONE = 0,
     /**< No operation */
     CPA_CY_SYM_OP_CIPHER,
     /**< Cipher only operation on the data */
@@ -256,7 +204,6 @@ typedef enum _CpaCySymCipherAlgorithm
  */
 #define CPA_CY_SYM_CIPHER_CAP_BITMAP_SIZE (32)
 
-
 /**
  *****************************************************************************
  * @ingroup cpaCySym
@@ -273,18 +220,18 @@ typedef enum _CpaCySymCipherDirection
     /**< Decrypt Data */
 } CpaCySymCipherDirection;
 
-
 /**
  *****************************************************************************
  * @file cpa_cy_sym.h
  * @ingroup cpaCySym
  *      Symmetric Cipher Op Data for key derivation
  * @description
- *      This structure contains the cipher key or the data to derive 
+ *      This structure contains the cipher key or the data to derive
  *      the cipher key in addition to other cipher related data.
  *
  *****************************************************************************/
-typedef struct _CpaCySymDeriveOpData {
+typedef struct _CpaCySymDeriveOpData
+{
     Cpa8U *pContext;
     /**< Pointer to Context structure */
     Cpa16U contextLen;
@@ -300,7 +247,8 @@ typedef struct _CpaCySymDeriveOpData {
  *      Decryption) to setup a session.
  *
  *****************************************************************************/
-typedef struct _CpaCySymCipherSetupData {
+typedef struct _CpaCySymCipherSetupData
+{
     CpaCySymCipherAlgorithm cipherAlgorithm;
     /**< Cipher algorithm and mode */
     Cpa32U cipherKeyLenInBytes;
@@ -459,7 +407,7 @@ typedef enum _CpaCySymHashAlgorithm
      * implement the ChaCha20-Poly1305 AEAD algorithm. */
     CPA_CY_SYM_HASH_SM3
     /**< SM3 hash algorithm. Supported in all 3 hash modes. */
- } CpaCySymHashAlgorithm;
+} CpaCySymHashAlgorithm;
 
 /**
  * @ingroup cpaCySym
@@ -487,7 +435,8 @@ typedef enum _CpaCySymHashAlgorithm
  *      CPA_CY_SYM_HASH_MODE_NESTED mode.
  *
  *****************************************************************************/
-typedef struct _CpaCySymHashNestedModeSetupData {
+typedef struct _CpaCySymHashNestedModeSetupData
+{
     Cpa8U *pInnerPrefixData;
     /**< A pointer to a buffer holding the Inner Prefix data. For optimal
      * performance the prefix data SHOULD be 8-byte aligned. This data is
@@ -518,7 +467,8 @@ typedef struct _CpaCySymHashNestedModeSetupData {
  *      CPA_CY_SYM_HASH_MODE_AUTH mode.
  *
  *****************************************************************************/
-typedef struct _CpaCySymHashAuthModeSetupData {
+typedef struct _CpaCySymHashAuthModeSetupData
+{
     Cpa8U *authKey;
     /**< Authentication key pointer.
      * For the GCM (@ref CPA_CY_SYM_HASH_AES_GCM) and CCM (@ref
@@ -575,7 +525,8 @@ typedef struct _CpaCySymHashAuthModeSetupData {
  *      three hash modes and MUST be set for each mode.
  *
  *****************************************************************************/
-typedef struct _CpaCySymHashSetupData {
+typedef struct _CpaCySymHashSetupData
+{
     CpaCySymHashAlgorithm hashAlgorithm;
     /**< Hash algorithm. For mode CPA_CY_SYM_MODE_HASH_NESTED, this is the
      * inner hash algorithm. */
@@ -698,7 +649,8 @@ typedef enum _CpaCySymAlgChainOrder
  *      setup a session.
  *
  ****************************************************************************/
-typedef struct _CpaCySymSessionSetupData {
+typedef struct _CpaCySymSessionSetupData
+{
     CpaCyPriority sessionPriority;
     /**< Priority of this session */
     CpaCySymOp symOperation;
@@ -757,8 +709,7 @@ typedef struct _CpaCySymSessionSetupData {
      * packetType parameter set to a value other than
      * CPA_CY_SYM_PACKET_TYPE_FULL will fail.
      */
-} CpaCySymSessionSetupData ;
-
+} CpaCySymSessionSetupData;
 
 /**
  *****************************************************************************
@@ -767,14 +718,15 @@ typedef struct _CpaCySymSessionSetupData {
  * @description
  *      This structure contains data relating to resetting a session.
  ****************************************************************************/
-typedef struct _CpaCySymSessionUpdateData  {
+typedef struct _CpaCySymSessionUpdateData
+{
     Cpa32U flags;
     /**< Flags indicating which fields to update.
-      * All bits should be set to 0 except those fields to be updated.
-      */
-#define CPA_CY_SYM_SESUPD_CIPHER_KEY    1 << 0
-#define CPA_CY_SYM_SESUPD_CIPHER_DIR    1 << 1
-#define CPA_CY_SYM_SESUPD_AUTH_KEY      1 << 2
+     * All bits should be set to 0 except those fields to be updated.
+     */
+#define CPA_CY_SYM_SESUPD_CIPHER_KEY 1 << 0
+#define CPA_CY_SYM_SESUPD_CIPHER_DIR 1 << 1
+#define CPA_CY_SYM_SESUPD_AUTH_KEY 1 << 2
     Cpa8U *pCipherKey;
     /**< Cipher key.
      * The same restrictions apply as described in the corresponding field
@@ -812,7 +764,8 @@ typedef struct _CpaCySymSessionUpdateData  {
  *      before it has been returned in the callback, undefined behavior will
  *      result.
  ****************************************************************************/
-typedef struct _CpaCySymOpData {
+typedef struct _CpaCySymOpData
+{
     CpaCySymSessionCtx sessionCtx;
     /**< Handle for the initialized session context */
     CpaCySymPacketType packetType;
@@ -914,7 +867,8 @@ typedef struct _CpaCySymOpData {
     /**<  If the digestIsAppended member of the @ref CpaCySymSessionSetupData
      * structure is NOT set then this is a pointer to the location where the
      * digest result should be inserted (in the case of digest generation)
-     * or where the purported digest exists (in the case of digest verification).
+     * or where the purported digest exists (in the case of digest
+     * verification).
      *
      * At session registration time, the client specified the digest result
      * length with the digestResultLenInBytes member of the @ref
@@ -1003,13 +957,13 @@ typedef struct _CpaCySymOpData {
  *
  *      If the deriveCtxData structure contains non-NULL entries for the
  *      context structure, this indicates the cipher key and initialization
- *      vector will be either supplied in, or derived from, that context 
+ *      vector will be either supplied in, or derived from, that context
  *      structure.  In this case, the pointers to and the lengths of the cipher
- *      key and iv in the symOpData structure must be NULL and zero 
+ *      key and iv in the symOpData structure must be NULL and zero
  *      respectively.
  *
- *      Additionally, if the cipher key is provided in the symOpData then 
- *      the deriveCtxData fields must be set to NULL and zero. 
+ *      Additionally, if the cipher key is provided in the symOpData then
+ *      the deriveCtxData fields must be set to NULL and zero.
  *
  * @see
  *      CpaCySymPacketType
@@ -1020,12 +974,13 @@ typedef struct _CpaCySymOpData {
  *      before it has been returned in the callback, undefined behavior will
  *      result.
  ****************************************************************************/
-typedef struct _CpaCySymOpData2 {
+typedef struct _CpaCySymOpData2
+{
 
     CpaCySymOpData symOpData;
-    /**< Symetric opdata. */
+    /**< Symmetric opdata. */
     CpaCySymDeriveOpData deriveCtxData;
-    /**< Key derivation specifc opdata.  */
+    /**< Key derivation specific opdata. */
 } CpaCySymOpData2;
 
 /**
@@ -1037,9 +992,11 @@ typedef struct _CpaCySymOpData2 {
  *      @ref CpaCySymOpData struct for the authenticated encryption
  *      algorithm @ref CPA_CY_SYM_HASH_AES_CCM.
  ****************************************************************************/
-#define CPA_CY_SYM_CCM_SET_NONCE(pOpData, pNonce, nonceLen) do { \
-    memcpy(&pOpData->pIv[1], pNonce, nonceLen); \
-    memcpy(&pOpData->pAdditionalAuthData[1], pNonce, nonceLen); \
+#define CPA_CY_SYM_CCM_SET_NONCE(pOpData, pNonce, nonceLen)                    \
+    do                                                                         \
+    {                                                                          \
+        memcpy(&pOpData->pIv[1], pNonce, nonceLen);                            \
+        memcpy(&pOpData->pAdditionalAuthData[1], pNonce, nonceLen);            \
     } while (0)
 
 /**
@@ -1051,10 +1008,11 @@ typedef struct _CpaCySymOpData2 {
  *      appropriate location of the@ref CpaCySymOpData struct for the
  *      authenticated encryption algorithm @ref CPA_CY_SYM_HASH_AES_CCM.
  ****************************************************************************/
-#define CPA_CY_SYM_CCM_SET_AAD(pOpData, pAad, aadLen) do { \
-    memcpy(&pOpData->pAdditionalAuthData[18], pAad, aadLen); \
+#define CPA_CY_SYM_CCM_SET_AAD(pOpData, pAad, aadLen)                          \
+    do                                                                         \
+    {                                                                          \
+        memcpy(&pOpData->pAdditionalAuthData[18], pAad, aadLen);               \
     } while (0)
-
 
 /**
  *****************************************************************************
@@ -1068,7 +1026,8 @@ typedef struct _CpaCySymOpData2 {
  *      operations. Statistics are set to zero when the component is
  *      initialized.
  ****************************************************************************/
-typedef struct _CpaCySymStats {
+typedef struct _CpaCySymStats
+{
     Cpa32U numSessionsInitialized;
     /**<  Number of session initialized */
     Cpa32U numSessionsRemoved;
@@ -1100,7 +1059,8 @@ typedef struct _CpaCySymStats {
  *      the Symmetric Cryptographic operations.
  *      Statistics are set to zero when the component is initialized.
  ****************************************************************************/
-typedef struct _CpaCySymStats64 {
+typedef struct _CpaCySymStats64
+{
     Cpa64U numSessionsInitialized;
     /**<  Number of session initialized */
     Cpa64U numSessionsRemoved;
@@ -1184,11 +1144,11 @@ typedef struct _CpaCySymStats64 {
  *
  *****************************************************************************/
 typedef void (*CpaCySymCbFunc)(void *pCallbackTag,
-        CpaStatus status,
-        const CpaCySymOp operationType,
-        void *pOpData,
-        CpaBufferList *pDstBuffer,
-        CpaBoolean verifyResult);
+                               CpaStatus status,
+                               const CpaCySymOp operationType,
+                               void *pOpData,
+                               CpaBufferList *pDstBuffer,
+                               CpaBoolean verifyResult);
 
 /**
  *****************************************************************************
@@ -1205,9 +1165,9 @@ typedef void (*CpaCySymCbFunc)(void *pCallbackTag,
  *      cpaCySymSessionCtxGetSize() will always return the same size and that
  *      the size will not be different for different setup data parameters.
  *      However, it should be noted that the size may change:
- *        (1) between different implementations of the API (e.g. between software
- *            and hardware implementations or between different hardware
- *            implementations)
+ *        (1) between different implementations of the API (e.g. between
+ *            software and hardware implementations or between different
+ *            hardware implementations)
  *        (2) between different releases of the same API implementation.
  *
  *      The size returned by this function is the smallest size needed to
@@ -1260,10 +1220,10 @@ typedef void (*CpaCySymCbFunc)(void *pCallbackTag,
  *      cpaCySymPerformOp()
  *
  *****************************************************************************/
-CpaStatus
-cpaCySymSessionCtxGetSize(const CpaInstanceHandle instanceHandle,
-        const CpaCySymSessionSetupData *pSessionSetupData,
-        Cpa32U *pSessionCtxSizeInBytes);
+CpaStatus cpaCySymSessionCtxGetSize(
+    const CpaInstanceHandle instanceHandle,
+    const CpaCySymSessionSetupData *pSessionSetupData,
+    Cpa32U *pSessionCtxSizeInBytes);
 
 /**
  *****************************************************************************
@@ -1328,10 +1288,10 @@ cpaCySymSessionCtxGetSize(const CpaInstanceHandle instanceHandle,
  *      cpaCySymPerformOp()
  *
  *****************************************************************************/
-CpaStatus
-cpaCySymSessionCtxGetDynamicSize(const CpaInstanceHandle instanceHandle,
-        const CpaCySymSessionSetupData *pSessionSetupData,
-        Cpa32U *pSessionCtxSizeInBytes);
+CpaStatus cpaCySymSessionCtxGetDynamicSize(
+    const CpaInstanceHandle instanceHandle,
+    const CpaCySymSessionSetupData *pSessionSetupData,
+    Cpa32U *pSessionCtxSizeInBytes);
 
 /**
  *****************************************************************************
@@ -1403,11 +1363,10 @@ cpaCySymSessionCtxGetDynamicSize(const CpaInstanceHandle instanceHandle,
  *      cpaCySymPerformOp()
  *
  *****************************************************************************/
-CpaStatus
-cpaCySymInitSession(const CpaInstanceHandle instanceHandle,
-        const CpaCySymCbFunc pSymCb,
-        const CpaCySymSessionSetupData *pSessionSetupData,
-        CpaCySymSessionCtx sessionCtx);
+CpaStatus cpaCySymInitSession(const CpaInstanceHandle instanceHandle,
+                              const CpaCySymCbFunc pSymCb,
+                              const CpaCySymSessionSetupData *pSessionSetupData,
+                              CpaCySymSessionCtx sessionCtx);
 
 /**
  *****************************************************************************
@@ -1461,9 +1420,8 @@ cpaCySymInitSession(const CpaInstanceHandle instanceHandle,
  *      cpaCySymInitSession()
  *
  *****************************************************************************/
-CpaStatus
-cpaCySymRemoveSession(const CpaInstanceHandle instanceHandle,
-        CpaCySymSessionCtx pSessionCtx);
+CpaStatus cpaCySymRemoveSession(const CpaInstanceHandle instanceHandle,
+                                CpaCySymSessionCtx pSessionCtx);
 
 /**
  *****************************************************************************
@@ -1517,9 +1475,9 @@ cpaCySymRemoveSession(const CpaInstanceHandle instanceHandle,
  *      This is a synchronous function and has no completion callback
  *      associated with it.
  *****************************************************************************/
-CpaStatus
-cpaCySymUpdateSession(CpaCySymSessionCtx sessionCtx,
-        const CpaCySymSessionUpdateData *pSessionUpdateData);
+CpaStatus cpaCySymUpdateSession(
+    CpaCySymSessionCtx sessionCtx,
+    const CpaCySymSessionUpdateData *pSessionUpdateData);
 
 /**
  *****************************************************************************
@@ -1538,10 +1496,9 @@ cpaCySymUpdateSession(CpaCySymSessionCtx sessionCtx,
  * @param[out] pSessionInUse         Returns CPA_TRUE if there are
  *                                   outstanding requests on the session,
  *                                   or CPA_FALSE otherwise.
-*****************************************************************************/
-CpaStatus
-cpaCySymSessionInUse(CpaCySymSessionCtx sessionCtx,
-          CpaBoolean* pSessionInUse);
+ *****************************************************************************/
+CpaStatus cpaCySymSessionInUse(CpaCySymSessionCtx sessionCtx,
+                               CpaBoolean *pSessionInUse);
 
 /**
  *****************************************************************************
@@ -1667,10 +1624,10 @@ cpaCySymSessionInUse(CpaCySymSessionCtx sessionCtx,
  *                              be the same).  This effectively means that the
  *                              source buffer must in fact be big enough to hold
  *                              the output data, too.  This is because,
- *                              for out-of-place processing, the data outside the
- *                              regions in the source buffer on which
- *                              cryptographic operations are performed are copied
- *                              into the destination buffer. To perform
+ *                              for out-of-place processing, the data outside
+ *                              the regions in the source buffer on which
+ *                              cryptographic operations are performed are
+ *                              copied into the destination buffer. To perform
  *                              "in-place" processing set the pDstBuffer
  *                              parameter in cpaCySymPerformOp function to point
  *                              at the same location as pSrcBuffer. For optimum
@@ -1709,13 +1666,12 @@ cpaCySymSessionInUse(CpaCySymSessionCtx sessionCtx,
  *      cpaCySymInitSession(),
  *      cpaCySymRemoveSession()
  *****************************************************************************/
-CpaStatus
-cpaCySymPerformOp(const CpaInstanceHandle instanceHandle,
-        void *pCallbackTag,
-        const CpaCySymOpData *pOpData,
-        const CpaBufferList *pSrcBuffer,
-        CpaBufferList *pDstBuffer,
-        CpaBoolean *pVerifyResult);
+CpaStatus cpaCySymPerformOp(const CpaInstanceHandle instanceHandle,
+                            void *pCallbackTag,
+                            const CpaCySymOpData *pOpData,
+                            const CpaBufferList *pSrcBuffer,
+                            CpaBufferList *pDstBuffer,
+                            CpaBoolean *pVerifyResult);
 
 /**
  *****************************************************************************
@@ -1775,7 +1731,7 @@ cpaCySymPerformOp(const CpaInstanceHandle instanceHandle,
  *****************************************************************************/
 CpaStatus CPA_DEPRECATED
 cpaCySymQueryStats(const CpaInstanceHandle instanceHandle,
-        struct _CpaCySymStats *pSymStats);
+                   struct _CpaCySymStats *pSymStats);
 
 /**
  *****************************************************************************
@@ -1830,9 +1786,8 @@ cpaCySymQueryStats(const CpaInstanceHandle instanceHandle,
  * @see
  *      CpaCySymStats64
  *****************************************************************************/
-CpaStatus
-cpaCySymQueryStats64(const CpaInstanceHandle instanceHandle,
-        CpaCySymStats64 *pSymStats);
+CpaStatus cpaCySymQueryStats64(const CpaInstanceHandle instanceHandle,
+                               CpaCySymStats64 *pSymStats);
 
 /**
  *****************************************************************************
@@ -1924,9 +1879,8 @@ typedef struct _CpaCySymCapabilitiesInfo
  * @post
  *      None
  *****************************************************************************/
-CpaStatus
-cpaCySymQueryCapabilities(const CpaInstanceHandle instanceHandle,
-        CpaCySymCapabilitiesInfo * pCapInfo);
+CpaStatus cpaCySymQueryCapabilities(const CpaInstanceHandle instanceHandle,
+                                    CpaCySymCapabilitiesInfo *pCapInfo);
 
 #ifdef __cplusplus
 } /* close the extern "C" { */

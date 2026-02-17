@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -115,6 +63,15 @@ extern CpaBoolean testOverFlow_g;
 extern volatile CpaBoolean dc_service_started_g;
 extern CpaBoolean gRetainPartials;
 extern CpaBoolean disableAdditionalCmpbufferSize_g;
+extern volatile CpaBoolean enableDcDpFlatsToSGLConv_g;
+extern volatile Cpa32U dcDpNumFlatsPerSGL_g;
+#if DC_API_VERSION_AT_LEAST(3, 2)
+extern volatile Cpa32U dcDpPartialReadBufferMask_g;
+extern volatile CpaBoolean dcDpEnableZeroPad_g;
+#define IS_PARTREAD_TEST()                                                     \
+    ((dcDpPartialReadBufferMask_g > 0) ? CPA_TRUE : CPA_FALSE)
+#define IS_ZEROPAD_TEST() (dcDpEnableZeroPad_g)
+#endif /* DC_API_VERSION_AT_LEAST(3, 2) */
 extern Cpa32U getThroughput(Cpa64U numPackets,
                             Cpa32U packetSize,
                             perf_cycles_t cycles);
@@ -125,6 +82,12 @@ extern volatile CpaBoolean LZ4BlockIndependence_g;
 void dcPerformCallback(void *pCallbackTag, CpaStatus status);
 void dcReadPerformCallback(void *pCallbackTag, CpaStatus status);
 
+CpaStatus setAutoSelectBestMode(CpaDcAutoSelectBest mode);
+CpaStatus disableAdditionalCmpbufferSize(CpaBoolean value);
+CpaStatus compareBuffers2(CpaBufferList ***ppSrc,
+                          CpaBufferList ***ppDst,
+                          CpaBufferList ***ppComp,
+                          compression_test_params_t *setup);
 /* corpus Data structure */
 extern CpaBoolean useZlib_g;
 extern Cpa32U expansionFactor_g;
@@ -141,13 +104,18 @@ CpaStatus disableZeroByteRequest(void);
 
 #define CPA_CRC64_POLYNOMIAL1 0x42F0E1EBA9EA3693ULL
 #define CPA_CRC64_POLYNOMIAL2 0x9A6C9329AC4BC9B5ULL
+#define CPA_CRC32_POLYNOMIAL1 (((Cpa64U)(0x04c11db7)) << 32)
+#define CPA_CRC32_POLYNOMIAL2 (((Cpa64U)(0x1EDC6F41)) << 32)
 
 #define CPA_CRC64_XOROUT_0 0x0ULL
 #define CPA_CRC64_XOROUT_1 0xFFFFFFFFFFFFFFFFULL
 #define CPA_CRC64_XOROUT_2 0x9465776698231213ULL
+#define CPA_CRC32_XOROUT_1 (((Cpa64U)(0xffffffff)) << 32)
+#define CPA_CRC32_XOROUT_2 ((Cpa64U)(0xffffffff))
 
 #define CPA_CRC64_INITIAL_VALUE_0 0x0ULL
 #define CPA_CRC64_INITIAL_VALUE_1 0x6386926455673254ULL
+#define CPA_CRC32_INITIAL_VALUE_1 (((Cpa64U)(0xffffffff)) << 32)
 
 #define CHECK_AND_STOPDCSERVICES()                                             \
     if (dc_service_started_g == CPA_TRUE)                                      \

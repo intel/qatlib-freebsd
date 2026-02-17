@@ -2,63 +2,11 @@
  *****************************************************************************
  *
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  *
  ***************************************************************************/
@@ -210,13 +158,20 @@ static CpaStatus pointMuliplication(Cpa8U *pPointX,
 
     /* Allocate output flat buffers */
     status = OS_MALLOC(&pGenX, sizeof(CpaFlatBuffer));
-    status |= OS_MALLOC(&pGenY, sizeof(CpaFlatBuffer));
     if (CPA_STATUS_SUCCESS != status)
-        PRINT_ERR("Memory alloc error\n");
+        PRINT_ERR("Failed to allocate memory for pGenX\n");
     else
     {
-        pGenY->dataLenInBytes = DATA_LEN;
+        pGenX->pData = NULL;
         pGenX->dataLenInBytes = DATA_LEN;
+    }
+    status = OS_MALLOC(&pGenY, sizeof(CpaFlatBuffer));
+    if (CPA_STATUS_SUCCESS != status)
+        PRINT_ERR("Failed to allocate memory for pGenY\n");
+    else
+    {
+        pGenY->pData = NULL;
+        pGenY->dataLenInBytes = DATA_LEN;
     }
 
     /* Alloc data for output buffers */
@@ -286,14 +241,23 @@ static CpaStatus pointMuliplication(Cpa8U *pPointX,
     }
 
     /* Free memory */
-    PHYS_CONTIG_FREE(pOpData->x.pData);
-    PHYS_CONTIG_FREE(pOpData->y.pData);
-    PHYS_CONTIG_FREE(pOpData->k.pData);
-    PHYS_CONTIG_FREE(pGenX->pData);
-    PHYS_CONTIG_FREE(pGenY->pData);
-    OS_FREE(pOpData);
-    OS_FREE(pGenX);
-    OS_FREE(pGenY);
+    if (NULL != pOpData)
+    {
+        PHYS_CONTIG_FREE(pOpData->x.pData);
+        PHYS_CONTIG_FREE(pOpData->y.pData);
+        PHYS_CONTIG_FREE(pOpData->k.pData);
+        OS_FREE(pOpData);
+    }
+    if (NULL != pGenX)
+    {
+        PHYS_CONTIG_FREE(pGenX->pData);
+        OS_FREE(pGenX);
+    }
+    if (NULL != pGenY)
+    {
+        PHYS_CONTIG_FREE(pGenY->pData);
+        OS_FREE(pGenY);
+    }
 
     return status;
 }
@@ -425,7 +389,7 @@ static CpaStatus edDsaSign(Cpa8U *privateKey,
     /* Copy data to buffer */
     if (CPA_STATUS_SUCCESS == status)
     {
-        memcpy(dataToHash, prefix, DATA_LEN);
+        memmove(dataToHash, prefix, DATA_LEN);
         memcpy(dataToHash + DATA_LEN, PH_M, HASH_LEN);
 
         /* Alloc data for output */
@@ -707,7 +671,7 @@ CpaStatus ecMontEdwdsDsaSample(void)
     CpaStatus status = CPA_STATUS_FAIL;
 
     /* Get instance handle */
-    sampleCyGetInstance(&cyInstHandle);
+    sampleAsymGetInstance(&cyInstHandle);
     if (cyInstHandle == NULL)
         return CPA_STATUS_FAIL;
 

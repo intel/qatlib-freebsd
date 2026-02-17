@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -80,7 +28,6 @@
 #include "cpa.h"
 #include "cpa_cy_im.h"
 #include "cpa_dc.h"
-
 
 #ifdef DO_CRYPTO
 #include "cpa_cy_sym.h"
@@ -180,6 +127,12 @@ struct completion_struct
 #include <vm/vm.h>
 #include <vm/pmap.h>
 
+/* Check for CY API version */
+#define CY_API_VERSION_AT_LEAST(major, minor)                                  \
+    (CPA_CY_API_VERSION_NUM_MAJOR > major ||                                   \
+     (CPA_CY_API_VERSION_NUM_MAJOR == major &&                                 \
+      CPA_CY_API_VERSION_NUM_MINOR >= minor))
+
 #ifdef __x86_64__
 #define SAMPLE_ADDR_LEN uint64_t
 #else
@@ -210,6 +163,14 @@ typedef struct thread *sampleThread;
             printf(args);                                                      \
         }                                                                      \
     } while (0)
+
+/**< Prints the arguments */
+#define PRINT(args...)                                                         \
+    do                                                                         \
+    {                                                                          \
+        printf(args);                                                          \
+    } while (0)
+
 /**< Prints the name of the function and the arguments */
 #define PRINT_ERR(args...)                                                     \
     do                                                                         \
@@ -524,7 +485,8 @@ static __inline CpaPhysicalAddr sampleVirtToPhys(void *virtAddr)
 
 static __inline CpaStatus sampleThreadCreate(sampleThread *thread,
                                              void *funct,
-                                             void *args)
+                                             void *args,
+                                             CpaBoolean thread_auto_detach)
 {
 #ifdef USER_SPACE
     if (pthread_create(thread, NULL, funct, args) != 0)
@@ -532,11 +494,11 @@ static __inline CpaStatus sampleThreadCreate(sampleThread *thread,
         PRINT_ERR("Failed create thread\n");
         return CPA_STATUS_FAIL;
     }
-    else
+    if (CPA_TRUE == thread_auto_detach)
     {
         pthread_detach(*thread);
-        return CPA_STATUS_SUCCESS;
     }
+    return CPA_STATUS_SUCCESS;
 #else
     if (kthread_add(funct, args, &proc0, thread, 0, 0, "cpa sample") != 0)
     {
@@ -545,6 +507,18 @@ static __inline CpaStatus sampleThreadCreate(sampleThread *thread,
     }
     return CPA_STATUS_SUCCESS;
 #endif
+}
+
+static __inline CpaStatus sampleThreadJoin(sampleThread *thread)
+{
+#ifdef USER_SPACE
+    if (pthread_join(*thread, NULL) != 0)
+    {
+        PRINT_ERR("Failed join thread\n");
+        return CPA_STATUS_FAIL;
+    }
+#endif
+    return CPA_STATUS_SUCCESS;
 }
 
 static __inline void sampleThreadExit(void)
@@ -557,6 +531,10 @@ static __inline void sampleThreadExit(void)
 }
 
 #ifdef DO_CRYPTO
+void sampleAsymGetInstance(CpaInstanceHandle *pAsymInstHandle);
+
+void sampleSymGetInstance(CpaInstanceHandle *pSymInstHandle);
+
 void sampleCyGetInstance(CpaInstanceHandle *pCyInstHandle);
 
 void sampleCyStartPolling(CpaInstanceHandle cyInstHandle);
@@ -575,7 +553,6 @@ void sampleDcStopPolling(void);
 Cpa64U sampleCoderdtsc(void);
 
 void hexLog(Cpa8U *pData, Cpa32U numBytes, const char *caption);
-
 
 #ifdef __x86_64__
 #define SAMPLE_CODE_UINT Cpa64U

@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -137,8 +85,22 @@ static CpaStatus do_userReset()
         LAC_LOG_ERROR("Mutex init failed\n");
         return CPA_STATUS_FAIL;
     }
+    if (pthread_mutex_lock(&sync_lock))
+    {
+        LAC_LOG_ERROR("Mutex lock failed\n");
+        pthread_mutex_destroy(&sync_lock);
+        return CPA_STATUS_FAIL;
+    }
 #endif
     start_ref_count = 0;
+#ifndef ICP_WITHOUT_THREAD
+    if (pthread_mutex_unlock(&sync_lock))
+    {
+        LAC_LOG_ERROR("Mutex unlock failed\n");
+        pthread_mutex_destroy(&sync_lock);
+        return CPA_STATUS_FAIL;
+    }
+#endif
     adf_reset_userProxy();
     reset_adf_subsystemTable();
 
@@ -209,8 +171,10 @@ CpaStatus icp_sal_userStart(const char *process_name)
         {
             LAC_LOG_DEBUG("icp_adf_userProcessToStart failed\n");
 #ifndef ICP_WITHOUT_THREAD
-            pthread_mutex_unlock(&sync_lock);
-            pthread_mutex_destroy(&sync_lock);
+            if (pthread_mutex_unlock(&sync_lock))
+                LAC_LOG_ERROR("Mutex unlock failed\n");
+            else
+                pthread_mutex_destroy(&sync_lock);
 #endif
             return CPA_STATUS_FAIL;
         }
@@ -223,8 +187,10 @@ CpaStatus icp_sal_userStart(const char *process_name)
         {
             LAC_LOG_ERROR("start_ref_count overflow!\n");
 #ifndef ICP_WITHOUT_THREAD
-            pthread_mutex_unlock(&sync_lock);
-            pthread_mutex_destroy(&sync_lock);
+            if (pthread_mutex_unlock(&sync_lock))
+                LAC_LOG_ERROR("Mutex unlock failed\n");
+            else
+                pthread_mutex_destroy(&sync_lock);
 #endif
             return CPA_STATUS_FAIL;
         }
@@ -237,7 +203,6 @@ CpaStatus icp_sal_userStart(const char *process_name)
     if (pthread_mutex_unlock(&sync_lock))
     {
         LAC_LOG_ERROR("Mutex unlock failed\n");
-        pthread_mutex_destroy(&sync_lock);
         return CPA_STATUS_FAIL;
     }
 #endif
@@ -271,6 +236,7 @@ static CpaStatus do_userStop()
 CpaStatus icp_sal_userStop()
 {
     CpaStatus status = CPA_STATUS_SUCCESS;
+    CpaBoolean destroy_mutex = CPA_FALSE;
 
     pid_t pid = getpid();
 
@@ -295,6 +261,13 @@ CpaStatus icp_sal_userStop()
         start_ref_count -= 1;
     }
     osalMemSet(multi_section_name, '\0', ADF_CFG_MAX_SECTION_LEN_IN_BYTES);
+
+    if (0 == start_ref_count)
+    {
+        start_ref_pid = -1;
+        destroy_mutex = CPA_TRUE;
+    }
+
 #ifndef ICP_WITHOUT_THREAD
     if (pthread_mutex_unlock(&sync_lock))
     {
@@ -302,6 +275,13 @@ CpaStatus icp_sal_userStop()
         return CPA_STATUS_FAIL;
     }
 #endif
+    if (CPA_TRUE == destroy_mutex)
+    {
+#ifndef ICP_WITHOUT_THREAD
+        pthread_mutex_destroy(&sync_lock);
+#endif
+    }
+
     return status;
 }
 
@@ -337,6 +317,39 @@ CpaStatus icp_sal_heartbeat_simulate_failure(Cpa32U accelId)
 }
 
 #endif /* QAT_HB_FAIL_SIM */
+
+CpaStatus icp_sal_get_num_pfs(Cpa16U *pNumPFs)
+{
+    return CPA_STATUS_UNSUPPORTED;
+}
+
+CpaStatus icp_sal_get_pf_info(CpaPfInfo *pPf_info)
+{
+    return CPA_STATUS_UNSUPPORTED;
+}
+
+#ifdef ICP_RING_EXCEPTION_SIM
+CpaStatus icp_sal_ring_exception_simulate(void *ring)
+{
+    return CPA_STATUS_UNSUPPORTED;
+}
+
+CpaStatus icp_sal_ring_exception_stop_simulate(void *ring)
+{
+    return CPA_STATUS_UNSUPPORTED;
+}
+
+CpaStatus icp_sal_rp_exception_is_set(void *ring)
+{
+    return CPA_STATUS_UNSUPPORTED;
+}
+
+Cpa32S icp_sal_check_ring_error(void *ring)
+{
+    return CPA_STATUS_UNSUPPORTED;
+}
+
+#endif /* ICP_RING_EXCEPTION_SIM */
 
 CpaStatus icp_sal_ns_cnv_simulate_error(CpaInstanceHandle dcInstance)
 {

@@ -36,9 +36,16 @@ quickassist/include/lac/cpa_cy_sym.h
 quickassist/include/lac/cpa_cy_sym_dp.h
 quickassist/lookaside/access_layer/include/icp_buffer_desc.h
 quickassist/lookaside/access_layer/include/icp_sal.h
+quickassist/lookaside/access_layer/include/icp_sal_congestion_mgmt.h
+quickassist/lookaside/access_layer/include/icp_sal_dc_error_simulation.h
+quickassist/lookaside/access_layer/include/icp_sal_dev_versions.h
+quickassist/lookaside/access_layer/include/icp_sal_du.h
+quickassist/lookaside/access_layer/include/icp_sal_hb_fail_simulation.h
 quickassist/lookaside/access_layer/include/icp_sal_iommu.h
-quickassist/lookaside/access_layer/include/icp_sal_nrbg_ht.h
 quickassist/lookaside/access_layer/include/icp_sal_poll.h
+quickassist/lookaside/access_layer/include/icp_sal_qat_dbg.h
+quickassist/lookaside/access_layer/include/icp_sal_ring_exception_simulation.h
+quickassist/lookaside/access_layer/include/icp_sal_tl.h
 quickassist/lookaside/access_layer/include/icp_sal_user.h
 quickassist/lookaside/access_layer/include/icp_sal_versions.h
 quickassist/lookaside/access_layer/src/common/compression/crc32_gzip_refl_by8.S
@@ -188,6 +195,7 @@ quickassist/lookaside/access_layer/src/common/utils/sal_versions.c
 quickassist/lookaside/access_layer/src/device/dev_info.c
 quickassist/lookaside/access_layer/src/qat_direct/include/adf_kernel_types.h
 quickassist/lookaside/access_layer/src/qat_direct/include/adf_user.h
+quickassist/lookaside/access_layer/src/qat_direct/include/adf_user_du.h
 quickassist/lookaside/access_layer/src/qat_direct/include/icp_accel_devices.h
 quickassist/lookaside/access_layer/src/qat_direct/include/icp_adf_accel_mgr.h
 quickassist/lookaside/access_layer/src/qat_direct/include/icp_adf_cfg.h
@@ -290,6 +298,8 @@ quickassist/lookaside/access_layer/src/sample_code/performance/compression/cante
 quickassist/lookaside/access_layer/src/sample_code/performance/compression/cpa_sample_code_dc_dp.c
 quickassist/lookaside/access_layer/src/sample_code/performance/compression/cpa_sample_code_dc_dp.h
 quickassist/lookaside/access_layer/src/sample_code/performance/compression/cpa_sample_code_dc_perf.h
+quickassist/lookaside/access_layer/src/sample_code/performance/compression/cpa_sample_code_dc_stateful.c
+quickassist/lookaside/access_layer/src/sample_code/performance/compression/cpa_sample_code_dc_stateful2.c
 quickassist/lookaside/access_layer/src/sample_code/performance/compression/cpa_sample_code_dc_utils.c
 quickassist/lookaside/access_layer/src/sample_code/performance/compression/cpa_sample_code_dc_utils.h
 quickassist/lookaside/access_layer/src/sample_code/performance/compression/cpa_sample_code_zlib.c
@@ -327,7 +337,9 @@ quickassist/lookaside/access_layer/src/sample_code/performance/framework/freebsd
 quickassist/lookaside/access_layer/src/sample_code/performance/qae/qae_mem.h
 quickassist/lookaside/access_layer/src/sample_code/performance/qae/qae_mem_utils.h
 quickassist/lookaside/access_layer/src/user/sal_user.c
+quickassist/lookaside/access_layer/src/user/sal_user_du.c
 quickassist/lookaside/access_layer/src/user/sal_user_dyn_instance.c
+quickassist/lookaside/access_layer/src/user/sal_user_tl.c
 quickassist/lookaside/firmware/include/icp_qat_fw.h
 quickassist/lookaside/firmware/include/icp_qat_fw_comp.h
 quickassist/lookaside/firmware/include/icp_qat_fw_la.h
@@ -343,7 +355,10 @@ quickassist/utilities/libusdm_drv/freebsd/kernel_space/qae_mem_drv_utils.c
 quickassist/utilities/libusdm_drv/freebsd/kernel_space/qae_mem_utils.c
 quickassist/utilities/libusdm_drv/include/qae_mem_utils.h
 quickassist/utilities/libusdm_drv/qae_mem.h
+quickassist/utilities/libusdm_drv/user_space/qae_mem_common.c
 quickassist/utilities/libusdm_drv/user_space/qae_mem_hugepage_utils.h
+quickassist/utilities/libusdm_drv/user_space/qae_mem_lib_utils.h
+quickassist/utilities/libusdm_drv/user_space/qae_mem_multi_thread.h
 quickassist/utilities/libusdm_drv/user_space/qae_mem_user_utils.h
 quickassist/utilities/libusdm_drv/user_space/qae_mem_utils_common.c
 quickassist/utilities/libusdm_drv/user_space/qae_mem_utils_common.h
@@ -351,7 +366,6 @@ quickassist/utilities/libusdm_drv/user_space/qae_page_table_common.h
 quickassist/utilities/libusdm_drv/user_space/qae_page_table_defs.h
 quickassist/utilities/libusdm_drv/user_space/uio/qae_mem_hugepage_utils_uio.c
 quickassist/utilities/libusdm_drv/user_space/uio/qae_mem_utils_uio.c
-quickassist/utilities/libusdm_drv/user_space/uio/qae_page_table_uio.h
 quickassist/utilities/osal/include/Osal.h
 quickassist/utilities/osal/include/OsalDevDrvCommon.h
 quickassist/utilities/osal/include/OsalTypes.h

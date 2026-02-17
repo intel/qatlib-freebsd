@@ -1,62 +1,10 @@
 /****************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -95,9 +43,8 @@
 #define CPA_DC_H
 
 #ifdef __cplusplus
-extern"C" {
+extern "C" {
 #endif
-
 
 #ifndef CPA_H
 #include "cpa.h"
@@ -107,6 +54,9 @@ extern"C" {
  *****************************************************************************
  * @ingroup cpaDc
  *      CPA Dc Major Version Number
+ * @deprecated
+ *      As of v5.0 of the Compression API, this define has been deprecated,
+ *      replaced by @ref CPA_API_VERSION_NUM_MAJOR.
  * @description
  *      The CPA_DC API major version number. This number will be incremented
  *      when significant churn to the API has occurred. The combination of the
@@ -114,12 +64,15 @@ extern"C" {
  *      for this interface.
  *
  *****************************************************************************/
-#define CPA_DC_API_VERSION_NUM_MAJOR (3)
+#define CPA_DC_API_VERSION_NUM_MAJOR (CPA_API_VERSION_NUM_MAJOR)
 
 /**
  *****************************************************************************
  * @ingroup cpaDc
  *       CPA DC Minor Version Number
+ * @deprecated
+ *      As of v5.0 of the Compression API, this define has been deprecated,
+ *      replaced by @ref CPA_API_VERSION_NUM_MINOR.
  * @description
  *      The CPA_DC API minor version number. This number will be incremented
  *      when minor changes to the API has occurred. The combination of the major
@@ -127,7 +80,7 @@ extern"C" {
  *      this interface.
  *
  *****************************************************************************/
-#define CPA_DC_API_VERSION_NUM_MINOR (2)
+#define CPA_DC_API_VERSION_NUM_MINOR (CPA_API_VERSION_NUM_MINOR)
 
 /**
  *****************************************************************************
@@ -161,7 +114,6 @@ extern"C" {
      (CPA_DC_API_VERSION_NUM_MAJOR == major &&                                 \
       CPA_DC_API_VERSION_NUM_MINOR < minor))
 
-
 /**
  *****************************************************************************
  * @ingroup cpaDc
@@ -194,8 +146,7 @@ extern"C" {
  *
  *
  *****************************************************************************/
-typedef void * CpaDcSessionHandle;
-
+typedef void *CpaDcSessionHandle;
 
 /**
  *****************************************************************************
@@ -355,7 +306,6 @@ typedef enum _CpaDcChecksum
     /**< Application requires xxHash-32 checksum */
 } CpaDcChecksum;
 
-
 /**
  *****************************************************************************
  * @ingroup cpaDc
@@ -465,7 +415,7 @@ typedef enum _CpaDcReqStatus
     /**< Invalid block type (type == 3) */
     CPA_DC_BAD_STORED_BLOCK_LEN = -2,
     /**< Stored block length did not match one's complement */
-    CPA_DC_TOO_MANY_CODES  = -3,
+    CPA_DC_TOO_MANY_CODES = -3,
     /**< Too many length or distance codes */
     CPA_DC_INCOMPLETE_CODE_LENS = -4,
     /**< Code length codes incomplete */
@@ -482,23 +432,25 @@ typedef enum _CpaDcReqStatus
     CPA_DC_INVALID_DIST = -10,
     /**< Distance is too far back in fixed or dynamic block */
     CPA_DC_OVERFLOW = -11,
-    /**< Overflow detected.  This is an indication that output buffer has overflowed.
-     * For stateful sessions, this is a warning (the input can be adjusted and
-     * resubmitted).
-     * For stateless sessions this is an error condition */
+    /**< Overflow detected.  This is an indication that output buffer has
+     * overflowed. For stateful sessions, this is a warning (the input can be
+     * adjusted and resubmitted). For stateless sessions this is an error
+     * condition */
     CPA_DC_SOFTERR = -12,
     /**< Other non-fatal detected */
     CPA_DC_FATALERR = -13,
     /**< Fatal error detected */
     CPA_DC_MAX_RESUBITERR = -14,
-    /**< On an error being detected, the firmware attempted to correct and resubmitted the
+    /**< On an error being detected, the firmware attempted to correct and
+     * resubmitted the
      * request, however, the maximum resubmit value was exceeded */
     CPA_DC_INCOMPLETE_FILE_ERR = -15,
-    /**< The input file is incomplete.  Note this is an indication that the request was
-     * submitted with a CPA_DC_FLUSH_FINAL, however, a BFINAL bit was not found in the
-     * request */
+    /**< The input file is incomplete.  Note this is an indication that the
+     * request was submitted with a CPA_DC_FLUSH_FINAL, however, a BFINAL bit
+     * was not found in the request */
     CPA_DC_WDOG_TIMER_ERR = -16,
-   /**< The request was not completed as a watchdog timer hardware event occurred */
+    /**< The request was not completed as a watchdog timer hardware event
+       occurred */
     CPA_DC_EP_HARDWARE_ERR = -17,
     /**< Request was not completed as an end point hardware error occurred (for
      * example, a parity error) */
@@ -512,6 +464,10 @@ typedef enum _CpaDcReqStatus
     CPA_DC_REGION_OUT_OF_BOUNDS = -21,
     /**< Error returned when decompression ends before the specified partial
      * decompression region was produced */
+    CPA_DC_LZ4_INVALID_COMP_LEN = -24,
+    /**< LZ4 invalid request length */
+    CPA_DC_LZ4_MULTIBLOCK_WITHOUT_HEADER = -29,
+    /**< LZ4 block drop when using LZ4 without header mode */
     CPA_DC_LZ4_MAX_BLOCK_SIZE_EXCEEDED = -93,
     /**< LZ4 max block size exceeded */
     CPA_DC_LZ4_BLOCK_OVERFLOW_ERR = -95,
@@ -520,6 +476,9 @@ typedef enum _CpaDcReqStatus
     /**< LZ4 Decoded token offset or token length is zero */
     CPA_DC_LZ4_DISTANCE_OUT_OF_RANGE_ERR = -100,
     /**< LZ4 Distance out of range for len/distance pair */
+    CPA_DC_E2E_NO_DECOMPRESSION = -101,
+    /**< Integrity input CRC computed by compression accelerator OR
+     *   CnVnR or ASB resulted in uncompressed data */
 } CpaDcReqStatus;
 
 /**
@@ -584,6 +543,30 @@ typedef enum _CpaDcSkipMode
 /**
  *****************************************************************************
  * @ingroup cpaDc
+ *      Supported modes for LZ4 compressed output and corresponding CRCs.
+ *
+ * @description
+ *      This enumeration lists the supported modes for LZ4 compressed output and
+ *      corresponding CRCs.
+ *
+ *****************************************************************************/
+typedef enum _CpaDcLZ4OutputFormat
+{
+    CPA_DC_LZ4_OUTPUT_WITH_HEADER = 0,
+    /**< When this mode is selected, the destination buffer contains LZ4 data
+     * with the LZ4 header and LZ4 compressed data block. The oCRC field in
+     * CpaIntegrityCrc or CpaIntegrityCrc64 is calculated over both the LZ4
+     * header and LZ4 compressed data. */
+    CPA_DC_LZ4_OUTPUT_WITHOUT_HEADER = 1
+    /**< When this mode is selected, the destination buffer contains only the
+     * LZ4 compressed data block. The oCRC field in CpaIntegrityCrc or
+     * CpaIntegrityCrc64 is calculated over the LZ4 compressed data without the
+     * header. */
+} CpaDcLZ4OutputFormat;
+
+/**
+ *****************************************************************************
+ * @ingroup cpaDc
  *      Service specific return codes
  *
  * @description
@@ -592,8 +575,8 @@ typedef enum _CpaDcSkipMode
  *
  *****************************************************************************/
 
-#define CPA_DC_BAD_DATA     (-100)
-    /**<Input data in invalid */
+#define CPA_DC_BAD_DATA (-100)
+/**<Input data in invalid */
 
 /**
  *****************************************************************************
@@ -635,10 +618,7 @@ typedef enum _CpaDcSkipMode
  *      None
  *
  *****************************************************************************/
-typedef void (*CpaDcCallbackFn)(
-    void *callbackTag,
-    CpaStatus status);
-
+typedef void (*CpaDcCallbackFn)(void *callbackTag, CpaStatus status);
 
 /**
  *****************************************************************************
@@ -651,132 +631,131 @@ typedef void (*CpaDcCallbackFn)(
  *      both stateful and stateless compress and decompress sessions.
  *
  ****************************************************************************/
-typedef struct _CpaDcInstanceCapabilities  {
-        CpaBoolean  statefulLZSCompression;
-            /**<True if the Instance supports Stateful LZS compression */
-        CpaBoolean  statefulLZSDecompression;
-            /**<True if the Instance supports Stateful LZS decompression */
-        CpaBoolean  statelessLZSCompression;
-            /**<True if the Instance supports Stateless LZS compression */
-        CpaBoolean  statelessLZSDecompression;
-            /**<True if the Instance supports Stateless LZS decompression */
-        CpaBoolean  statefulLZSSCompression;
-            /**<True if the Instance supports Stateful LZSS compression */
-        CpaBoolean  statefulLZSSDecompression;
-            /**<True if the Instance supports Stateful LZSS decompression */
-        CpaBoolean  statelessLZSSCompression;
-            /**<True if the Instance supports Stateless LZSS compression */
-        CpaBoolean  statelessLZSSDecompression;
-            /**<True if the Instance supports Stateless LZSS decompression */
-        CpaBoolean  statefulELZSCompression;
-            /**<True if the Instance supports Stateful Extended LZS
-            compression */
-        CpaBoolean  statefulELZSDecompression;
-            /**<True if the Instance supports Stateful Extended LZS
-            decompression */
-        CpaBoolean  statelessELZSCompression;
-            /**<True if the Instance supports Stateless Extended LZS
-            compression */
-        CpaBoolean  statelessELZSDecompression;
-            /**<True if the Instance supports Stateless Extended LZS
-            decompression */
-        CpaBoolean  statefulDeflateCompression;
-            /**<True if the Instance supports Stateful Deflate compression */
-        CpaBoolean  statefulDeflateDecompression;
-            /**<True if the Instance supports Stateful Deflate
-            decompression */
-        CpaBoolean  statelessDeflateCompression;
-            /**<True if the Instance supports Stateless Deflate compression */
-        CpaBoolean  statelessDeflateDecompression;
-            /**<True if the Instance supports Stateless Deflate
-            decompression */
-        CpaBoolean  statelessLZ4Compression;
-            /**<True if the Instance supports Stateless LZ4 compression */
-        CpaBoolean  statelessLZ4Decompression;
-            /**<True if the Instance supports Stateless LZ4 decompression */
-        CpaBoolean  statefulLZ4Decompression;
-            /**<True if the Instance supports Stateful LZ4 decompression */
-        CpaBoolean  statelessLZ4SCompression;
-            /**<True if the Instance supports Stateless LZ4S compression */
-        CpaBoolean  checksumCRC32;
-            /**<True if the Instance can calculate a CRC32 checksum over
-                the uncompressed data. This value is only calculated when
-                CPA_DC_DEFLATE is configured as the algorithm for
-                CpaDcCompType */
-        CpaBoolean  checksumAdler32;
-            /**<True if the Instance can calculate an Adler-32 checksum over
-                the uncompressed data. This value is only calculated when
-                CPA_DC_DEFLATE is configured as the algorithm for
-                CpaDcCompType */
-        CpaBoolean  checksumXXHash32;
-            /**<True if the Instance can calculate an xxHash-32 hash over
-                the uncompressed data. This value is only calculated when
-                CPA_DC_LZ4 or CPA_DC_LZ4S is configured as the algorithm for
-                CpaDcCompType */
-        CpaBoolean  dynamicHuffman;
-            /**<True if the Instance supports dynamic Huffman trees in deflate
-                blocks */
-        CpaBoolean  dynamicHuffmanBufferReq;
-            /**<True if an Instance specific buffer is required to perform
-                a dynamic Huffman tree deflate request */
-        CpaBoolean  precompiledHuffman;
-            /**<True if the Instance supports precompiled Huffman trees in
-                deflate blocks */
-        CpaBoolean  autoSelectBestHuffmanTree;
-            /**<True if the Instance has the ability to automatically select
-                between different Huffman encoding schemes for better
-                compression ratios */
-        Cpa8U       validWindowSizeMaskCompression;
-            /**<Bits set to '1' for each valid window size supported by
-                the compression implementation */
-        Cpa8U       validWindowSizeMaskDecompression;
-            /**<Bits set to '1' for each valid window size supported by
-                the decompression implementation */
-        Cpa32U      internalHuffmanMem;
-            /**<Number of bytes internally available to be used when
-                    constructing dynamic Huffman trees. */
-        CpaBoolean  endOfLastBlock;
-            /**< True if the Instance supports stopping at the end of the last
-             * block in a deflate stream during a decompression operation and
-             * reporting that the end of the last block has been reached as
-             * part of the CpaDcReqStatus data. */
-        CpaBoolean  reportParityError;
-            /**<True if the instance supports parity error reporting. */
-        CpaBoolean  batchAndPack;
-            /**< True if the instance supports 'batch and pack' compression */
-        CpaBoolean  compressAndVerify;
-            /**<True if the instance supports checking that compressed data,
-             * generated as part of a compression operation, can be
-             * successfully decompressed. */
-        CpaBoolean  compressAndVerifyStrict;
-            /**< True if compressAndVerify is 'strictly' enabled for the
-             * instance. If strictly enabled, compressAndVerify will be enabled
-             * by default for compression operations and cannot be disabled by
-             * setting opData.compressAndVerify=0 with cpaDcCompressData2().
-             * Compression operations with opData.compressAndVerify=0 will
-             * return a CPA_STATUS_INVALID_PARAM error status when in
-             * compressAndVerify strict mode.
-             */
-        CpaBoolean  compressAndVerifyAndRecover;
-            /**<True if the instance supports recovering from errors detected
-             * by compressAndVerify by generating a stored block in the
-             * compressed output data buffer. This stored block replaces any
-             * compressed content that resulted in a compressAndVerify error.
-             */
-        CpaBoolean integrityCrcs;
-            /**<True if the instance supports 32 bit integrity CRC checking in
-             * the compression/decompression datapath. Refer to
-             * @ref CpaDcOpData for more details on integrity checking. */
-        CPA_BITMAP(dcChainCapInfo, CPA_DC_CHAIN_CAP_BITMAP_SIZE);
-            /**< Bitmap representing which chaining capabilities are supported
-             * by the instance.
-             * Bits can be tested using the macro @ref CPA_BITMAP_BIT_TEST.
-             * The bit positions are those specified in the enumerated type
-             * @ref CpaDcChainOperations in cpa_dc_chain.h. */
-        CpaBoolean integrityCrcs64b;
-            /**<True if the instance supports 64 bit integrity CRC checking in
-             * the compression / decompression datapath. Refer to
-             * @ref CpaDcOpData for more details on integrity checking. */
+typedef struct _CpaDcInstanceCapabilities
+{
+    CpaBoolean statefulLZSCompression;
+    /**<True if the Instance supports Stateful LZS compression */
+    CpaBoolean statefulLZSDecompression;
+    /**<True if the Instance supports Stateful LZS decompression */
+    CpaBoolean statelessLZSCompression;
+    /**<True if the Instance supports Stateless LZS compression */
+    CpaBoolean statelessLZSDecompression;
+    /**<True if the Instance supports Stateless LZS decompression */
+    CpaBoolean statefulLZSSCompression;
+    /**<True if the Instance supports Stateful LZSS compression */
+    CpaBoolean statefulLZSSDecompression;
+    /**<True if the Instance supports Stateful LZSS decompression */
+    CpaBoolean statelessLZSSCompression;
+    /**<True if the Instance supports Stateless LZSS compression */
+    CpaBoolean statelessLZSSDecompression;
+    /**<True if the Instance supports Stateless LZSS decompression */
+    CpaBoolean statefulELZSCompression;
+    /**<True if the Instance supports Stateful Extended LZS
+    compression */
+    CpaBoolean statefulELZSDecompression;
+    /**<True if the Instance supports Stateful Extended LZS
+    decompression */
+    CpaBoolean statelessELZSCompression;
+    /**<True if the Instance supports Stateless Extended LZS
+    compression */
+    CpaBoolean statelessELZSDecompression;
+    /**<True if the Instance supports Stateless Extended LZS
+    decompression */
+    CpaBoolean statefulDeflateCompression;
+    /**<True if the Instance supports Stateful Deflate compression */
+    CpaBoolean statefulDeflateDecompression;
+    /**<True if the Instance supports Stateful Deflate
+    decompression */
+    CpaBoolean statelessDeflateCompression;
+    /**<True if the Instance supports Stateless Deflate compression */
+    CpaBoolean statelessDeflateDecompression;
+    /**<True if the Instance supports Stateless Deflate
+    decompression */
+    CpaBoolean statelessLZ4Compression;
+    /**<True if the Instance supports Stateless LZ4 compression */
+    CpaBoolean statelessLZ4Decompression;
+    /**<True if the Instance supports Stateless LZ4 decompression */
+    CpaBoolean statefulLZ4Decompression;
+    /**<True if the Instance supports Stateful LZ4 decompression */
+    CpaBoolean statelessLZ4SCompression;
+    /**<True if the Instance supports Stateless LZ4S compression */
+    CpaBoolean checksumCRC32;
+    /**<True if the Instance can calculate a CRC32 checksum over
+        the uncompressed data. This value is only calculated when
+        CPA_DC_DEFLATE is configured as the algorithm for
+        CpaDcCompType */
+    CpaBoolean checksumAdler32;
+    /**<True if the Instance can calculate an Adler-32 checksum over
+        the uncompressed data. This value is only calculated when
+        CPA_DC_DEFLATE is configured as the algorithm for
+        CpaDcCompType */
+    CpaBoolean checksumXXHash32;
+    /**<True if the Instance can calculate an xxHash-32 hash over
+        the uncompressed data. This value is only calculated when
+        CPA_DC_LZ4 or CPA_DC_LZ4S is configured as the algorithm for
+        CpaDcCompType */
+    CpaBoolean dynamicHuffman;
+    /**<True if the Instance supports dynamic Huffman trees in deflate
+        blocks */
+    CpaBoolean dynamicHuffmanBufferReq;
+    /**<True if an Instance specific buffer is required to perform
+        a dynamic Huffman tree deflate request */
+    CpaBoolean precompiledHuffman;
+    /**<True if the Instance supports precompiled Huffman trees in
+        deflate blocks */
+    CpaBoolean autoSelectBestHuffmanTree;
+    /**<True if the Instance has the ability to automatically select
+        between different Huffman encoding schemes for better
+        compression ratios */
+    Cpa8U validWindowSizeMaskCompression;
+    /**<Bits set to '1' for each valid window size supported by
+        the compression implementation */
+    Cpa8U validWindowSizeMaskDecompression;
+    /**<Bits set to '1' for each valid window size supported by
+        the decompression implementation */
+    Cpa32U internalHuffmanMem;
+    /**<Number of bytes internally available to be used when
+            constructing dynamic Huffman trees. */
+    CpaBoolean endOfLastBlock;
+    /**< True if the Instance supports stopping at the end of the last
+     * block in a deflate stream during a decompression operation and
+     * reporting that the end of the last block has been reached as
+     * part of the CpaDcReqStatus data. */
+    CpaBoolean reportParityError;
+    /**<True if the instance supports parity error reporting. */
+    CpaBoolean batchAndPack;
+    /**< True if the instance supports 'batch and pack' compression */
+    CpaBoolean compressAndVerify;
+    /**<True if the instance supports checking that compressed data,
+     * generated as part of a compression operation, can be
+     * successfully decompressed. */
+    CpaBoolean compressAndVerifyStrict;
+    /**< True if compressAndVerify is 'strictly' enabled for the
+     * instance. If strictly enabled, compressAndVerify will be enabled
+     * by default for compression operations and cannot be disabled by
+     * setting opData.compressAndVerify=0 with cpaDcCompressData2().
+     * Compression operations with opData.compressAndVerify=0 will
+     * return a CPA_STATUS_INVALID_PARAM error status when in
+     * compressAndVerify strict mode. */
+    CpaBoolean compressAndVerifyAndRecover;
+    /**<True if the instance supports recovering from errors detected
+     * by compressAndVerify by generating a stored block in the
+     * compressed output data buffer. This stored block replaces any
+     * compressed content that resulted in a compressAndVerify error. */
+    CpaBoolean integrityCrcs;
+    /**<True if the instance supports 32 bit integrity CRC checking in
+     * the compression/decompression datapath. Refer to
+     * @ref CpaDcOpData for more details on integrity checking. */
+    CPA_BITMAP(dcChainCapInfo, CPA_DC_CHAIN_CAP_BITMAP_SIZE);
+    /**< Bitmap representing which chaining capabilities are supported
+     * by the instance.
+     * Bits can be tested using the macro @ref CPA_BITMAP_BIT_TEST.
+     * The bit positions are those specified in the enumerated type
+     * @ref CpaDcChainOperations in cpa_dc_chain.h. */
+    CpaBoolean integrityCrcs64b;
+    /**<True if the instance supports 64 bit integrity CRC checking in
+     * the compression / decompression datapath. Refer to
+     * @ref CpaDcOpData for more details on integrity checking. */
 } CpaDcInstanceCapabilities;
 
 /**
@@ -789,66 +768,66 @@ typedef struct _CpaDcInstanceCapabilities  {
  *      setup a session.
  *
  ****************************************************************************/
-typedef struct _CpaDcSessionSetupData  {
-        CpaDcCompLvl compLevel;
-          /**<Compression Level from CpaDcCompLvl */
-        CpaDcCompType compType;
-          /**<Compression type from CpaDcCompType */
-        CpaDcHuffType huffType;
-          /**<Huffman type from CpaDcHuffType */
-        CpaDcAutoSelectBest autoSelectBestHuffmanTree;
-          /**<Indicates if and how the implementation should select the best
-           * Huffman encoding. */
-        CpaDcSessionDir sessDirection;
-         /**<Session direction indicating whether session is used for
-            compression, decompression or both */
-        CpaDcSessionState sessState;
-        /**<Session state indicating whether the session should be configured
-            as stateless or stateful */
-        CpaDcCompWindowSize windowSize;
-        /**<Window size from CpaDcCompWindowSize */
-        CpaDcCompMinMatch minMatch;
-        /**<Min Match size from CpaDcCompMinMatch */
-        CpaDcCompLZ4BlockMaxSize lz4BlockMaxSize;
-        /**<Window size from CpaDcCompLZ4BlockMaxSize */
-        CpaBoolean lz4BlockChecksum;
-        /**<LZ4 Block Checksum setting for the LZ4 request.
-            For LZ4 decompression operations, this setting must be set based
-            on the B.Checksum flag originating from the LZ4 frame header.
-            For LZ4 compression operations, this setting will be ignored as
-            the implementation does not support generation of Data Block
-            checksums. */
-        CpaBoolean lz4BlockIndependence;
-        /**<LZ4 Block Independence Flag setting.
-            For LZ4 compression operations, this setting must be set based on
-            the Block Independence Flag originating from the LZ4 frame header.
-            For LZ4 decompression operations, this setting is ignored.
-            For data compressed with lz4BlockIndependence set to CPA_FALSE,
-            it is not possible to perform parallel decompression on the
-            compressed blocks. It is also not possible to access the produced
-            LZ4 blocks randomly.
-            */
-        CpaDcChecksum checksum;
-        /**<Desired checksum required for the session */
-        CpaBoolean accumulateXXHash;
-        /**<If TRUE the xxHash calculation for LZ4 requests using the session
-            based APIs will be accumulated across requests, with a valid xxHash
-            being written to CpaDcRqResults.checksum for the request which
-            specifies CPA_DC_FLUSH_FINAL in CpaDcOpData.flushFlag. When the
-            CPA_DC_FLUSH_FINAL is received, the internal XXHash state will be
-            reset for this session.
-            In the compression direction one exception is if a CPA_DC_OVERFLOW
-            error is returned, the xxHash value in the checksum field will be
-            valid for requests up to that point and the internal XXHash state
-            will not be reset. This will allow a user to either create an LZ4
-            frame based off the data at the time of overflow, or correct the
-            overflow condition and continue submitting requests until
-            specifying CPA_DC_FLUSH_FINAL.
-            Additionally the user can force the internal XXHash state to reset
-            (even on overflow) by calling cpaDcResetXXHashState on this session.
-            For the No-Session APIs (Ns) this flag will have no effect */
+typedef struct _CpaDcSessionSetupData
+{
+    CpaDcCompLvl compLevel;
+    /**<Compression Level from CpaDcCompLvl */
+    CpaDcCompType compType;
+    /**<Compression type from CpaDcCompType */
+    CpaDcHuffType huffType;
+    /**<Huffman type from CpaDcHuffType */
+    CpaDcAutoSelectBest autoSelectBestHuffmanTree;
+    /**<Indicates if and how the implementation should select the best
+     * Huffman encoding. */
+    CpaDcSessionDir sessDirection;
+    /**<Session direction indicating whether session is used for
+       compression, decompression or both */
+    CpaDcSessionState sessState;
+    /**<Session state indicating whether the session should be configured
+        as stateless or stateful */
+    CpaDcCompWindowSize windowSize;
+    /**<Window size from CpaDcCompWindowSize */
+    CpaDcCompMinMatch minMatch;
+    /**<Min Match size from CpaDcCompMinMatch */
+    CpaDcCompLZ4BlockMaxSize lz4BlockMaxSize;
+    /**<Window size from CpaDcCompLZ4BlockMaxSize */
+    CpaBoolean lz4BlockChecksum;
+    /**<LZ4 Block Checksum setting for the LZ4 request.
+        For LZ4 decompression operations, this setting must be set based
+        on the B.Checksum flag originating from the LZ4 frame header.
+        For LZ4 compression operations, this setting will be ignored as
+        the implementation does not support generation of Data Block
+        checksums. */
+    CpaBoolean lz4BlockIndependence;
+    /**<LZ4 Block Independence Flag setting.
+        For LZ4 compression operations, this setting must be set based on
+        the Block Independence Flag originating from the LZ4 frame header.
+        For LZ4 decompression operations, this setting is ignored.
+        For data compressed with lz4BlockIndependence set to CPA_FALSE,
+        it is not possible to perform parallel decompression on the
+        compressed blocks. It is also not possible to access the produced
+        LZ4 blocks randomly.
+        */
+    CpaDcChecksum checksum;
+    /**<Desired checksum required for the session */
+    CpaBoolean accumulateXXHash;
+    /**<If TRUE the xxHash calculation for LZ4 requests using the session
+        based APIs will be accumulated across requests, with a valid xxHash
+        being written to CpaDcRqResults.checksum for the request which
+        specifies CPA_DC_FLUSH_FINAL in CpaDcOpData.flushFlag. When the
+        CPA_DC_FLUSH_FINAL is received, the internal XXHash state will be
+        reset for this session.
+        In the compression direction one exception is if a CPA_DC_OVERFLOW
+        error is returned, the xxHash value in the checksum field will be
+        valid for requests up to that point and the internal XXHash state
+        will not be reset. This will allow a user to either create an LZ4
+        frame based off the data at the time of overflow, or correct the
+        overflow condition and continue submitting requests until
+        specifying CPA_DC_FLUSH_FINAL.
+        Additionally the user can force the internal XXHash state to reset
+        (even on overflow) by calling cpaDcResetXXHashState on this session.
+        For the No-Session APIs (Ns) this flag will have no effect */
 } CpaDcSessionSetupData;
-
 
 typedef CpaDcSessionSetupData CpaDcNsSetupData;
 
@@ -862,14 +841,15 @@ typedef CpaDcSessionSetupData CpaDcNsSetupData;
  *      update a session.
  *
  ****************************************************************************/
-typedef struct _CpaDcSessionUpdateData  {
-        CpaDcCompLvl compLevel;
-          /**<Compression Level from CpaDcCompLvl */
-        CpaDcHuffType huffType;
-          /**<Huffman type from CpaDcHuffType */
-        CpaBoolean   enableDmm;
-        /**<Desired DMM required for the session */
-} CpaDcSessionUpdateData ;
+typedef struct _CpaDcSessionUpdateData
+{
+    CpaDcCompLvl compLevel;
+    /**<Compression Level from CpaDcCompLvl */
+    CpaDcHuffType huffType;
+    /**<Huffman type from CpaDcHuffType */
+    CpaBoolean enableDmm;
+    /**<Desired DMM required for the session */
+} CpaDcSessionUpdateData;
 
 /**
  *****************************************************************************
@@ -881,28 +861,29 @@ typedef struct _CpaDcSessionUpdateData  {
  *      jobs submitted and completed for both compression and decompression.
  *
  ****************************************************************************/
-typedef struct _CpaDcStats  {
-        Cpa64U numCompRequests;
-          /**< Number of successful compression requests */
-        Cpa64U numCompRequestsErrors;
-          /**< Number of compression requests that had errors and
-             could not be processed */
-        Cpa64U numCompCompleted;
-          /**< Compression requests completed */
-        Cpa64U numCompCompletedErrors;
-          /**< Compression requests not completed due to errors */
-        Cpa64U numCompCnvErrorsRecovered;
-          /**< Compression CNV errors that have been recovered */
+typedef struct _CpaDcStats
+{
+    Cpa64U numCompRequests;
+    /**< Number of successful compression requests */
+    Cpa64U numCompRequestsErrors;
+    /**< Number of compression requests that had errors and
+       could not be processed */
+    Cpa64U numCompCompleted;
+    /**< Compression requests completed */
+    Cpa64U numCompCompletedErrors;
+    /**< Compression requests not completed due to errors */
+    Cpa64U numCompCnvErrorsRecovered;
+    /**< Compression CNV errors that have been recovered */
 
-        Cpa64U numDecompRequests;
-          /**< Number of successful decompression requests */
-        Cpa64U numDecompRequestsErrors;
-          /**< Number of decompression requests that had errors and
-             could not be processed */
-        Cpa64U numDecompCompleted;
-          /**< Decompression requests completed */
-        Cpa64U numDecompCompletedErrors;
-          /**< Decompression requests not completed due to errors */
+    Cpa64U numDecompRequests;
+    /**< Number of successful decompression requests */
+    Cpa64U numDecompRequestsErrors;
+    /**< Number of decompression requests that had errors and
+       could not be processed */
+    Cpa64U numDecompCompleted;
+    /**< Decompression requests completed */
+    Cpa64U numDecompCompletedErrors;
+    /**< Decompression requests not completed due to errors */
 
 } CpaDcStats;
 
@@ -924,40 +905,43 @@ typedef struct _CpaDcStats  {
  *      the checksum value will contain checksum produced by the operation.
  *
  ****************************************************************************/
-typedef struct _CpaDcRqResults  {
-        CpaDcReqStatus status;
-          /**< Additional status details from accelerator */
-        Cpa32U produced;
-          /**< Octets produced by the operation.
-           * For Data Plane "partial read" operations, the size of the produced
-           * data should be equal to the sum of the data offset and length of
-           * the requested decompressed data chunk.
-           * See ref @CpaDcDpPartialReadData. */
-        Cpa32U consumed;
-          /**< Octets consumed by the operation */
-        Cpa32U checksum;
-          /**< The checksum produced by the operation. For some checksum
-           * algorithms, setting this field on the input to a stateless
-           * compression/decompression request can be used to pass in an initial
-           * checksum value that will be used to seed the checksums produced by
-           * the stateless operation.
-           *
-           * The checksum algorithm CPA_DC_XXHASH32 does not support passing an
-           * input value in this parameter. Any initial value passed will be
-           * ignored by the compression/decompression operation when this
-           * checksum algorithm is used.
-           *
-           * For Data Plane "partial read" operations, the checksum is computed
-           * from the beginning of the decompressed data to the end of the
-           * requested chunk. See ref @CpaDcDpPartialReadData. */
-        CpaBoolean endOfLastBlock;
-          /**< Decompression operation has stopped at the end of the last
-           * block in a deflate stream. */
-        CpaBoolean dataUncompressed;
-          /**< If TRUE the output data for this request is uncompressed and
-           * in the format setup for the request. This value is only valid
-           * for CPA_DC_ASB_ENABLED or if compressAndVerifyAndRecover is set to
-           * TRUE in the CpaDcOpData structure for a request. */
+typedef struct _CpaDcRqResults
+{
+    CpaDcReqStatus status;
+    /**< Additional status details from accelerator */
+    Cpa32U produced;
+    /**< Octets produced by the operation
+     *
+     * For data plane "partial read" decompression operations,
+     * the size of the produced data should be equal to the sum of the data
+     * offset and length of the requested decompressed data chunk.
+     * See ref @CpaDcDpPartialReadData. */
+    Cpa32U consumed;
+    /**< Octets consumed by the operation */
+    Cpa32U checksum;
+    /**< The checksum produced by the operation. For some checksum
+     * algorithms, setting this field on the input to a stateless
+     * compression/decompression request can be used to pass in an initial
+     * checksum value that will be used to seed the checksums produced by
+     * the stateless operation.
+     *
+     * The checksum algorithm CPA_DC_XXHASH32 does not support passing an
+     * input value in this parameter. Any initial value passed will be
+     * ignored by the compression/decompression operation when this
+     * checksum algorithm is used.
+     *
+     * For data plane "partial read" decompression operations,
+     * the checksum is computed from the beginning of the decompressed data
+     * to the end of the requested chunk.
+     * See ref @CpaDcDpPartialReadData. */
+    CpaBoolean endOfLastBlock;
+    /**< Decompression operation has stopped at the end of the last
+     * block in a deflate stream. */
+    CpaBoolean dataUncompressed;
+    /**< If TRUE the output data for this request is uncompressed and
+     * in the format setup for the request. This value is only valid
+     * for CPA_DC_ASB_ENABLED or if compressAndVerifyAndRecover is set to
+     * TRUE in the CpaDcOpData structure for a request. */
 } CpaDcRqResults;
 
 /**
@@ -985,9 +969,10 @@ typedef enum _CpaDcIntegrityCrcSize
  *      calculations performed for a single request.
  *
  ****************************************************************************/
-typedef struct _CpaIntegrityCrc {
-        Cpa32U iCrc;   /**< CRC calculated on request's input  buffer */
-        Cpa32U oCrc;   /**< CRC calculated on request's output buffer */
+typedef struct _CpaIntegrityCrc
+{
+    Cpa32U iCrc; /**< CRC calculated on request's input  buffer */
+    Cpa32U oCrc; /**< CRC calculated on request's output buffer */
 } CpaIntegrityCrc;
 
 /**
@@ -999,9 +984,10 @@ typedef struct _CpaIntegrityCrc {
  *      calculations performed for a single request.
  *
  ****************************************************************************/
-typedef struct _CpaIntegrityCrc64b {
-        Cpa64U iCrc;   /**< CRC calculated on request's input  buffer */
-        Cpa64U oCrc;   /**< CRC calculated on request's output buffer */
+typedef struct _CpaIntegrityCrc64b
+{
+    Cpa64U iCrc; /**< CRC calculated on request's input  buffer */
+    Cpa64U oCrc; /**< CRC calculated on request's output buffer */
 } CpaIntegrityCrc64b;
 
 /**
@@ -1021,17 +1007,18 @@ typedef struct _CpaIntegrityCrc64b {
  *      this structure must be allocated in physical contiguous memory
  *
  ****************************************************************************/
-typedef struct _CpaCrcData {
-        Cpa32U crc32;
-        /**< CRC32 calculated on the input buffer during compression
-         * requests and on the output buffer during decompression requests. */
-        Cpa32U adler32;
-        /**< Adler32 calculated on the input buffer during compression
-         * requests and on the output buffer during decompression requests. */
-        CpaIntegrityCrc integrityCrc;
-          /**< 32bit Integrity CRCs */
-        CpaIntegrityCrc64b integrityCrc64b;
-          /**< 64bit Integrity CRCs */
+typedef struct _CpaCrcData
+{
+    Cpa32U crc32;
+    /**< CRC32 calculated on the input buffer during compression
+     * requests and on the output buffer during decompression requests. */
+    Cpa32U adler32;
+    /**< Adler32 calculated on the input buffer during compression
+     * requests and on the output buffer during decompression requests. */
+    CpaIntegrityCrc integrityCrc;
+    /**< 32bit Integrity CRCs */
+    CpaIntegrityCrc64b integrityCrc64b;
+    /**< 64bit Integrity CRCs */
 } CpaCrcData;
 
 /**
@@ -1045,17 +1032,18 @@ typedef struct _CpaCrcData {
  *      into the output buffer.
  *
  ****************************************************************************/
-typedef struct _CpaDcSkipData {
-        CpaDcSkipMode skipMode;
-        /**<Skip mode from CpaDcSkipMode for buffer processing */
-        Cpa32U skipLength;
-        /**<Number of bytes to skip when skip mode is enabled */
-        Cpa32U strideLength;
-        /**<Size of the stride between skip regions when skip mode is
-         * set to CPA_DC_SKIP_STRIDE. */
-        Cpa32U firstSkipOffset;
-        /**< Number of bytes to skip in a buffer before reading/writing the
-         * input/output data. */
+typedef struct _CpaDcSkipData
+{
+    CpaDcSkipMode skipMode;
+    /**<Skip mode from CpaDcSkipMode for buffer processing */
+    Cpa32U skipLength;
+    /**<Number of bytes to skip when skip mode is enabled */
+    Cpa32U strideLength;
+    /**<Size of the stride between skip regions when skip mode is
+     * set to CPA_DC_SKIP_STRIDE. */
+    Cpa32U firstSkipOffset;
+    /**< Number of bytes to skip in a buffer before reading/writing the
+     * input/output data. */
 } CpaDcSkipData;
 
 /**
@@ -1067,46 +1055,47 @@ typedef struct _CpaDcSkipData {
  *      compression operations.
  *
  ****************************************************************************/
-typedef struct _CpaDcOpData  {
-        CpaDcFlush flushFlag;
-        /**< Indicates the type of flush to be performed. */
-        CpaBoolean compressAndVerify;
-        /**< If set to true, for compression operations, the implementation
-         * will verify that compressed data, generated by the compression
-         * operation, can be successfully decompressed.
-         * This behavior is only supported for stateless compression.
-         * This behavior is only supported on instances that support the
-         * compressAndVerify capability. */
-        CpaBoolean compressAndVerifyAndRecover;
-        /**< If set to true, for compression operations, the implementation
-         * will automatically recover from a compressAndVerify error.
-         * This behavior is only supported for stateless compression.
-         * This behavior is only supported on instances that support the
-         * compressAndVerifyAndRecover capability.
-         * The compressAndVerify field in CpaDcOpData MUST be set to CPA_TRUE
-         * if compressAndVerifyAndRecover is set to CPA_TRUE. */
-        CpaBoolean integrityCrcCheck;
-        /**< If set to true, the implementation will verify that data
-         * integrity is preserved through the processing pipeline.
-         *
-         * Integrity CRC checking is not supported for decompression operations
-         * over data that contains multiple gzip headers. */
-        CpaBoolean verifyHwIntegrityCrcs;
-        /**< If set to true, software calculated CRCs will be compared
-         * against hardware generated integrity CRCs to ensure that data
-         * integrity is maintained when transferring data to and from the
-         * hardware accelerator. */
-        CpaDcIntegrityCrcSize integrityCrcSize;
-        /**< This option specifies the size of the CRC to be used for data
-         * integrity checking. As such it is only valid if this request is
-         * configured for data integrity checks. */
-        CpaDcSkipData inputSkipData;
-        /**< Optional skip regions in the input buffers */
-        CpaDcSkipData outputSkipData;
-        /**< Optional skip regions in the output buffers */
-        CpaCrcData *pCrcData;
-        /**< Pointer to CRCs for this operation, when integrity checks
-         * are enabled. */
+typedef struct _CpaDcOpData
+{
+    CpaDcFlush flushFlag;
+    /**< Indicates the type of flush to be performed. */
+    CpaBoolean compressAndVerify;
+    /**< If set to true, for compression operations, the implementation
+     * will verify that compressed data, generated by the compression
+     * operation, can be successfully decompressed.
+     * This behavior is only supported for stateless compression.
+     * This behavior is only supported on instances that support the
+     * compressAndVerify capability. */
+    CpaBoolean compressAndVerifyAndRecover;
+    /**< If set to true, for compression operations, the implementation
+     * will automatically recover from a compressAndVerify error.
+     * This behavior is only supported for stateless compression.
+     * This behavior is only supported on instances that support the
+     * compressAndVerifyAndRecover capability.
+     * The compressAndVerify field in CpaDcOpData MUST be set to CPA_TRUE
+     * if compressAndVerifyAndRecover is set to CPA_TRUE. */
+    CpaBoolean integrityCrcCheck;
+    /**< If set to true, the implementation will verify that data
+     * integrity is preserved through the processing pipeline.
+     *
+     * Integrity CRC checking is not supported for decompression operations
+     * over data that contains multiple gzip headers. */
+    CpaBoolean verifyHwIntegrityCrcs;
+    /**< If set to true, software calculated CRCs will be compared
+     * against hardware generated integrity CRCs to ensure that data
+     * integrity is maintained when transferring data to and from the
+     * hardware accelerator. */
+    CpaDcIntegrityCrcSize integrityCrcSize;
+    /**< This option specifies the size of the CRC to be used for data
+     * integrity checking. As such it is only valid if this request is
+     * configured for data integrity checks. */
+    CpaDcSkipData inputSkipData;
+    /**< Optional skip regions in the input buffers */
+    CpaDcSkipData outputSkipData;
+    /**< Optional skip regions in the output buffers */
+    CpaCrcData *pCrcData;
+    /**< Pointer to CRCs for this operation, when integrity checks
+     * are enabled. */
 } CpaDcOpData;
 
 /**
@@ -1118,12 +1107,13 @@ typedef struct _CpaDcOpData  {
  *      compression operations with additional options
  *
  ****************************************************************************/
-typedef struct _CpaDcOpData2  {
-        CpaDcOpData dcOpData;
-        /**< Data for compress operation. */
-        CpaBoolean appendCRC64;
-        /*< If set to true, crc64 of the clear text will be appended to
-         * the compressed data, after the last block. */
+typedef struct _CpaDcOpData2
+{
+    CpaDcOpData dcOpData;
+    /**< Data for compress operation. */
+    CpaBoolean appendCRC64;
+    /*< If set to true, crc64 of the clear text will be appended to
+     * the compressed data, after the last block. */
 } CpaDcOpData2;
 /**
  *****************************************************************************
@@ -1170,9 +1160,9 @@ typedef struct _CpaDcOpData2  {
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcQueryCapabilities(  CpaInstanceHandle dcInstance,
-        CpaDcInstanceCapabilities *pInstanceCapabilities );
+CpaStatus cpaDcQueryCapabilities(
+    CpaInstanceHandle dcInstance,
+    CpaDcInstanceCapabilities *pInstanceCapabilities);
 
 /**
  *****************************************************************************
@@ -1194,8 +1184,8 @@ cpaDcQueryCapabilities(  CpaInstanceHandle dcInstance,
  *      so long as a single thread of execution is used for job submission.
  *
  * @context
- *      This is a synchronous function and it cannot sleep. It can be executed in
- *      a context that does not permit sleeping.
+ *      This is a synchronous function and it cannot sleep. It can be executed
+ *in a context that does not permit sleeping.
  * @assumptions
  *      None
  * @sideEffects
@@ -1264,14 +1254,11 @@ cpaDcQueryCapabilities(  CpaInstanceHandle dcInstance,
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcInitSession( CpaInstanceHandle     dcInstance,
-        CpaDcSessionHandle              pSessionHandle,
-        CpaDcSessionSetupData           *pSessionData,
-        CpaBufferList                   *pContextBuffer,
-        CpaDcCallbackFn                 callbackFn );
-
-
+CpaStatus cpaDcInitSession(CpaInstanceHandle dcInstance,
+                           CpaDcSessionHandle pSessionHandle,
+                           CpaDcSessionSetupData *pSessionData,
+                           CpaBufferList *pContextBuffer,
+                           CpaDcCallbackFn callbackFn);
 
 /**
  *****************************************************************************
@@ -1282,8 +1269,8 @@ cpaDcInitSession( CpaInstanceHandle     dcInstance,
  *      This function is used to initialize E2E programmable CRC parameters.
  *
  * @context
- *      This is a synchronous function and it cannot sleep. It can be executed in
- *      a context that does not permit sleeping.
+ *      This is a synchronous function and it cannot sleep. It can be executed
+ *      in a context that does not permit sleeping.
  * @assumptions
  *      None
  * @sideEffects
@@ -1315,10 +1302,57 @@ cpaDcInitSession( CpaInstanceHandle     dcInstance,
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcSetCrcControlData(CpaInstanceHandle dcInstance,
-                       CpaDcSessionHandle pSessionHandle,
-                       CpaCrcControlData *pCrcControlData);
+CpaStatus cpaDcSetCrcControlData(CpaInstanceHandle dcInstance,
+                                 CpaDcSessionHandle pSessionHandle,
+                                 CpaCrcControlData *pCrcControlData);
+
+/**
+ *****************************************************************************
+ * @ingroup cpaDc
+ *      Set the LZ4 output format and corresponding CRCs.
+ *
+ * @description
+ *      This function is used to set the LZ4 output format and corresponding
+ *      CRCs.
+ *
+ * @context
+ *      This is a synchronous function and it cannot sleep. It can be executed
+ *      in a context that does not permit sleeping.
+ * @assumptions
+ *      None
+ * @sideEffects
+ *      None
+ * @blocking
+ *      No
+ * @reentrant
+ *      No
+ * @threadSafe
+ *      Yes
+ *
+ * @param[in]       dcInstance      Instance handle derived from discovery
+ *                                  functions.
+ * @param[in,out]   pSessionHandle  Pointer to a session handle.
+ * @param[in]       outLZ4Format    LZ4 output format.
+ *
+ * @retval CPA_STATUS_SUCCESS        Function executed successfully.
+ * @retval CPA_STATUS_FAIL           Function failed.
+ * @retval CPA_STATUS_UNSUPPORTED    Function is not supported.
+ *
+ * @pre
+ *      dcInstance has been started using cpaDcStartInstance.
+ *      cpaDcInitSession has been called to initialize session parameters.
+ * @post
+ *      None
+ * @note
+ *      Only a synchronous version of this function is provided.
+ *
+ * @see
+ *      None
+ *
+ *****************************************************************************/
+CpaStatus cpaDcSetLZ4OutputFormat(CpaInstanceHandle dcInstance,
+                                  CpaDcSessionHandle pSessionHandle,
+                                  CpaDcLZ4OutputFormat outLZ4Format);
 
 /**
  *****************************************************************************
@@ -1367,9 +1401,8 @@ cpaDcSetCrcControlData(CpaInstanceHandle dcInstance,
  *      cpaDcInitSession()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcResetSession(const CpaInstanceHandle dcInstance,
-        CpaDcSessionHandle pSessionHandle );
+CpaStatus cpaDcResetSession(const CpaInstanceHandle dcInstance,
+                            CpaDcSessionHandle pSessionHandle);
 
 /**
  *****************************************************************************
@@ -1417,9 +1450,8 @@ cpaDcResetSession(const CpaInstanceHandle dcInstance,
  * @see
  *
  *****************************************************************************/
-CpaStatus
-cpaDcResetXXHashState(const CpaInstanceHandle dcInstance,
-        CpaDcSessionHandle pSessionHandle );
+CpaStatus cpaDcResetXXHashState(const CpaInstanceHandle dcInstance,
+                                CpaDcSessionHandle pSessionHandle);
 
 /**
  *****************************************************************************
@@ -1434,7 +1466,7 @@ cpaDcResetXXHashState(const CpaInstanceHandle dcInstance,
  *      intermediate buffers are associated with the instance, and the
  *      intended change would require these buffers.
  *      This function can be called at any time after a successful call of
- *      cpaDcDpInitSession().
+ *      cpaDcInitSession().
  *      This function does not change the parameters to compression request
  *      already in flight.
  *
@@ -1478,8 +1510,8 @@ cpaDcResetXXHashState(const CpaInstanceHandle dcInstance,
  *
  *****************************************************************************/
 CpaStatus cpaDcUpdateSession(const CpaInstanceHandle dcInstance,
-        CpaDcSessionHandle pSessionHandle,
-        CpaDcSessionUpdateData *pSessionUpdateData );
+                             CpaDcSessionHandle pSessionHandle,
+                             CpaDcSessionUpdateData *pSessionUpdateData);
 
 /**
  *****************************************************************************
@@ -1532,9 +1564,8 @@ CpaStatus cpaDcUpdateSession(const CpaInstanceHandle dcInstance,
  *      cpaDcInitSession()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcRemoveSession(const CpaInstanceHandle dcInstance,
-        CpaDcSessionHandle pSessionHandle );
+CpaStatus cpaDcRemoveSession(const CpaInstanceHandle dcInstance,
+                             CpaDcSessionHandle pSessionHandle);
 
 /**
  *****************************************************************************
@@ -1585,11 +1616,10 @@ cpaDcRemoveSession(const CpaInstanceHandle dcInstance,
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcDeflateCompressBound(const CpaInstanceHandle dcInstance,
-        CpaDcHuffType huffType,
-        Cpa32U inputSize,
-        Cpa32U *outputSize );
+CpaStatus cpaDcDeflateCompressBound(const CpaInstanceHandle dcInstance,
+                                    CpaDcHuffType huffType,
+                                    Cpa32U inputSize,
+                                    Cpa32U *outputSize);
 
 /**
  *****************************************************************************
@@ -1636,10 +1666,9 @@ cpaDcDeflateCompressBound(const CpaInstanceHandle dcInstance,
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcLZ4CompressBound(const CpaInstanceHandle dcInstance,
-        Cpa32U inputSize,
-        Cpa32U *outputSize );
+CpaStatus cpaDcLZ4CompressBound(const CpaInstanceHandle dcInstance,
+                                Cpa32U inputSize,
+                                Cpa32U *outputSize);
 
 /**
  *****************************************************************************
@@ -1686,10 +1715,9 @@ cpaDcLZ4CompressBound(const CpaInstanceHandle dcInstance,
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcLZ4SCompressBound(const CpaInstanceHandle dcInstance,
-        Cpa32U inputSize,
-        Cpa32U *outputSize );
+CpaStatus cpaDcLZ4SCompressBound(const CpaInstanceHandle dcInstance,
+                                 Cpa32U inputSize,
+                                 Cpa32U *outputSize);
 
 /**
  *****************************************************************************
@@ -1891,14 +1919,13 @@ cpaDcLZ4SCompressBound(const CpaInstanceHandle dcInstance,
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcCompressData( CpaInstanceHandle dcInstance,
-        CpaDcSessionHandle  pSessionHandle,
-        CpaBufferList       *pSrcBuff,
-        CpaBufferList       *pDestBuff,
-        CpaDcRqResults      *pResults,
-        CpaDcFlush          flushFlag,
-        void                 *callbackTag );
+CpaStatus cpaDcCompressData(CpaInstanceHandle dcInstance,
+                            CpaDcSessionHandle pSessionHandle,
+                            CpaBufferList *pSrcBuff,
+                            CpaBufferList *pDestBuff,
+                            CpaDcRqResults *pResults,
+                            CpaDcFlush flushFlag,
+                            void *callbackTag);
 
 /**
  *****************************************************************************
@@ -1959,14 +1986,13 @@ cpaDcCompressData( CpaInstanceHandle dcInstance,
  *      cpaDcCompressData()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcCompressData2( CpaInstanceHandle dcInstance,
-        CpaDcSessionHandle  pSessionHandle,
-        CpaBufferList       *pSrcBuff,
-        CpaBufferList       *pDestBuff,
-        CpaDcOpData         *pOpData,
-        CpaDcRqResults      *pResults,
-        void                 *callbackTag );
+CpaStatus cpaDcCompressData2(CpaInstanceHandle dcInstance,
+                             CpaDcSessionHandle pSessionHandle,
+                             CpaBufferList *pSrcBuff,
+                             CpaBufferList *pDestBuff,
+                             CpaDcOpData *pOpData,
+                             CpaDcRqResults *pResults,
+                             void *callbackTag);
 
 /**
  *****************************************************************************
@@ -2041,15 +2067,14 @@ cpaDcCompressData2( CpaInstanceHandle dcInstance,
  *     None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcNsCompressData( CpaInstanceHandle dcInstance,
-        CpaDcNsSetupData    *pSetupData,
-        CpaBufferList       *pSrcBuff,
-        CpaBufferList       *pDestBuff,
-        CpaDcOpData         *pOpData,
-        CpaDcRqResults      *pResults,
-        CpaDcCallbackFn     callbackFn,
-        void                *callbackTag );
+CpaStatus cpaDcNsCompressData(CpaInstanceHandle dcInstance,
+                              CpaDcNsSetupData *pSetupData,
+                              CpaBufferList *pSrcBuff,
+                              CpaBufferList *pDestBuff,
+                              CpaDcOpData *pOpData,
+                              CpaDcRqResults *pResults,
+                              CpaDcCallbackFn callbackFn,
+                              void *callbackTag);
 /**
  *****************************************************************************
  * @ingroup cpaDc
@@ -2081,11 +2106,11 @@ cpaDcNsCompressData( CpaInstanceHandle dcInstance,
  * @param[in]       pDestBuff           Pointer to buffer space for data
  *                                      after decompression.
  * @param[in,out]   pResults            Pointer to results structure
- * @param[in]       flushFlag           When set to CPA_DC_FLUSH_FINAL, indicates
- *                                      that the input buffer contains all of
- *                                      the data for the compression session,
- *                                      allowing the function to release
- *                                      history data.
+ * @param[in]       flushFlag           When set to CPA_DC_FLUSH_FINAL,
+ *                                      indicates that the input buffer contains
+ *                                      all of the data for the compression
+ *                                      session, allowing the function to
+ *                                      release history data.
  * @param[in]        callbackTag        User supplied value to help correlate
  *                                      the callback with its associated
  *                                      request.
@@ -2138,15 +2163,13 @@ cpaDcNsCompressData( CpaInstanceHandle dcInstance,
  *      cpaDcCompressData()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcDecompressData( CpaInstanceHandle dcInstance,
-        CpaDcSessionHandle  pSessionHandle,
-        CpaBufferList       *pSrcBuff,
-        CpaBufferList       *pDestBuff,
-        CpaDcRqResults      *pResults,
-        CpaDcFlush          flushFlag,
-        void                *callbackTag );
-
+CpaStatus cpaDcDecompressData(CpaInstanceHandle dcInstance,
+                              CpaDcSessionHandle pSessionHandle,
+                              CpaBufferList *pSrcBuff,
+                              CpaBufferList *pDestBuff,
+                              CpaDcRqResults *pResults,
+                              CpaDcFlush flushFlag,
+                              void *callbackTag);
 
 /**
  *****************************************************************************
@@ -2157,7 +2180,8 @@ cpaDcDecompressData( CpaInstanceHandle dcInstance,
  *      This API consumes compressed data from the input buffer and generates
  *      uncompressed data in the output buffer. This API is very similar to
  *      cpaDcDecompressData() except it provides a CpaDcOpData structure for
- *      passing additional input parameters not covered in cpaDcDecompressData().
+ *      passing additional input parameters not covered in
+ *      cpaDcDecompressData().
  *
  * @context
  *      When called as an asynchronous function it cannot sleep. It can be
@@ -2210,14 +2234,13 @@ cpaDcDecompressData( CpaInstanceHandle dcInstance,
  *      cpaDcCompressData()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcDecompressData2( CpaInstanceHandle dcInstance,
-        CpaDcSessionHandle  pSessionHandle,
-        CpaBufferList       *pSrcBuff,
-        CpaBufferList       *pDestBuff,
-        CpaDcOpData         *pOpData,
-        CpaDcRqResults      *pResults,
-        void                *callbackTag );
+CpaStatus cpaDcDecompressData2(CpaInstanceHandle dcInstance,
+                               CpaDcSessionHandle pSessionHandle,
+                               CpaBufferList *pSrcBuff,
+                               CpaBufferList *pDestBuff,
+                               CpaDcOpData *pOpData,
+                               CpaDcRqResults *pResults,
+                               void *callbackTag);
 
 /**
  *****************************************************************************
@@ -2249,8 +2272,10 @@ cpaDcDecompressData2( CpaInstanceHandle dcInstance,
  *      Yes
  *
  * @param[in]       dcInstance          Target service instance.
- * @param[in]       pSetupData          Configuration structure for decompression..
- * @param[in]       pSrcBuff            Pointer to data buffer for decompression.
+ * @param[in]       pSetupData          Configuration structure for
+ *                                      decompression.
+ * @param[in]       pSrcBuff            Pointer to data buffer for
+ *                                      decompression.
  * @param[in]       pDestBuff           Pointer to buffer space for data
  *                                      after decompression.
  * @param[in]       pOpData             Additional input parameters.
@@ -2284,15 +2309,14 @@ cpaDcDecompressData2( CpaInstanceHandle dcInstance,
  *      cpaDcCompressData()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcNsDecompressData( CpaInstanceHandle dcInstance,
-        CpaDcNsSetupData    *pSetupData,
-        CpaBufferList       *pSrcBuff,
-        CpaBufferList       *pDestBuff,
-        CpaDcOpData         *pOpData,
-        CpaDcRqResults      *pResults,
-        CpaDcCallbackFn     callbackFn,
-        void                *callbackTag );
+CpaStatus cpaDcNsDecompressData(CpaInstanceHandle dcInstance,
+                                CpaDcNsSetupData *pSetupData,
+                                CpaBufferList *pSrcBuff,
+                                CpaBufferList *pDestBuff,
+                                CpaDcOpData *pOpData,
+                                CpaDcRqResults *pResults,
+                                CpaDcCallbackFn callbackFn,
+                                void *callbackTag);
 
 /**
  *****************************************************************************
@@ -2390,9 +2414,9 @@ cpaDcNsDecompressData( CpaInstanceHandle dcInstance,
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcGenerateHeader( CpaDcSessionHandle pSessionHandle,
-    CpaFlatBuffer *pDestBuff, Cpa32U *count );
+CpaStatus cpaDcGenerateHeader(CpaDcSessionHandle pSessionHandle,
+                              CpaFlatBuffer *pDestBuff,
+                              Cpa32U *count);
 
 /**
  *****************************************************************************
@@ -2469,11 +2493,9 @@ cpaDcGenerateHeader( CpaDcSessionHandle pSessionHandle,
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcGenerateFooter( CpaDcSessionHandle pSessionHandle,
-    CpaFlatBuffer *pDestBuff,
-    CpaDcRqResults *pResults );
-
+CpaStatus cpaDcGenerateFooter(CpaDcSessionHandle pSessionHandle,
+                              CpaFlatBuffer *pDestBuff,
+                              CpaDcRqResults *pResults);
 
 /**
  *****************************************************************************
@@ -2516,8 +2538,8 @@ cpaDcGenerateFooter( CpaDcSessionHandle pSessionHandle,
  *
  * @note
  *      This function outputs the required compression format header to
- *      the destination buffer. The CpaDcNsSetupData structure fields are used to
- *      determine the header type.
+ *      the destination buffer. The CpaDcNsSetupData structure fields are used
+ *      to determine the header type.
  *
  *      To output an LZ4 header the structure must have been initialized with
  *      with CpaDcCompType CPA_DC_LZ4.
@@ -2536,10 +2558,9 @@ cpaDcGenerateFooter( CpaDcSessionHandle pSessionHandle,
  *      cpaDcGenerateHeader
  *
  *****************************************************************************/
-CpaStatus
-cpaDcNsGenerateHeader( CpaDcNsSetupData *pSetupData,
-    CpaFlatBuffer *pDestBuff,
-    Cpa32U *count );
+CpaStatus cpaDcNsGenerateHeader(CpaDcNsSetupData *pSetupData,
+                                CpaFlatBuffer *pDestBuff,
+                                Cpa32U *count);
 
 /**
  *****************************************************************************
@@ -2586,8 +2607,8 @@ cpaDcNsGenerateHeader( CpaDcNsSetupData *pSetupData,
  *
  * @note
  *      This function outputs the required compression format footer to
- *      the destination buffer. The CpaDcNsSetupData structure fields are used to
- *      determine the footer type created.
+ *      the destination buffer. The CpaDcNsSetupData structure fields are used
+ *      to determine the footer type created.
  *
  *      To output an LZ4 footer the structure must have been initialized with
  *      with CpaDcCompType CPA_DC_LZ4.
@@ -2600,9 +2621,9 @@ cpaDcNsGenerateHeader( CpaDcNsSetupData *pSetupData,
  *      CpaDcChecksum CPA_DC_ADLER32.
  *      For CpaDcChecksum CPA_DC_NONE no footer is output.
  *
- *      The produced element of the pResults structure will be incremented by the
- *      number of bytes added to the buffer. The pointer to the buffer
- *      will not be modified.
+ *      The produced element of the pResults structure will be incremented by
+ *      the number of bytes added to the buffer. The pointer to the buffer will
+ *      not be modified.
  *
  * @see
  *      CpaDcNsSetupData
@@ -2610,12 +2631,10 @@ cpaDcNsGenerateHeader( CpaDcNsSetupData *pSetupData,
  *      cpaDcGenerateFooter
  *
  *****************************************************************************/
-CpaStatus
-cpaDcNsGenerateFooter( CpaDcNsSetupData *pSetupData,
-    Cpa64U totalLength,
-    CpaFlatBuffer *pDestBuff,
-    CpaDcRqResults *pResults );
-
+CpaStatus cpaDcNsGenerateFooter(CpaDcNsSetupData *pSetupData,
+                                Cpa64U totalLength,
+                                CpaFlatBuffer *pDestBuff,
+                                CpaDcRqResults *pResults);
 
 /**
  *****************************************************************************
@@ -2657,9 +2676,7 @@ cpaDcNsGenerateFooter( CpaDcNsSetupData *pSetupData,
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcGetStats( CpaInstanceHandle dcInstance,
-      CpaDcStats *pStatistics );
+CpaStatus cpaDcGetStats(CpaInstanceHandle dcInstance, CpaDcStats *pStatistics);
 
 /*****************************************************************************/
 /* Instance Discovery Functions */
@@ -2711,8 +2728,7 @@ cpaDcGetStats( CpaInstanceHandle dcInstance,
  *      cpaDcGetInstances
  *
  *****************************************************************************/
-CpaStatus
-cpaDcGetNumInstances(Cpa16U* pNumInstances);
+CpaStatus cpaDcGetNumInstances(Cpa16U *pNumInstances);
 
 /**
  *****************************************************************************
@@ -2766,9 +2782,8 @@ cpaDcGetNumInstances(Cpa16U* pNumInstances);
  *      cpaDcGetInstances
  *
  *****************************************************************************/
-CpaStatus
-cpaDcGetInstances(Cpa16U numInstances,
-                        CpaInstanceHandle* dcInstances);
+CpaStatus cpaDcGetInstances(Cpa16U numInstances,
+                            CpaInstanceHandle *dcInstances);
 
 /**
  *****************************************************************************
@@ -2779,8 +2794,9 @@ cpaDcGetInstances(Cpa16U numInstances,
  * @description
  *      This function will determine the number of intermediate buffer lists
  *      required by an implementation for a compression instance. These buffers
- *      should then be allocated and provided when calling @ref cpaDcStartInstance()
- *      to start a compression instance that will use dynamic compression.
+ *      should then be allocated and provided when calling @ref
+ *      cpaDcStartInstance() to start a compression instance that will use
+ *      dynamic compression.
  *
  * @context
  *      This function may sleep, and  MUST NOT be called in interrupt context.
@@ -2818,9 +2834,8 @@ cpaDcGetInstances(Cpa16U numInstances,
  *      cpaDcStartInstance()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcGetNumIntermediateBuffers(CpaInstanceHandle instanceHandle,
-        Cpa16U *pNumBuffers);
+CpaStatus cpaDcGetNumIntermediateBuffers(CpaInstanceHandle instanceHandle,
+                                         Cpa16U *pNumBuffers);
 
 /**
  *****************************************************************************
@@ -2864,10 +2879,11 @@ cpaDcGetNumIntermediateBuffers(CpaInstanceHandle instanceHandle,
  *                                      initialized.
  * @param[in]   numBuffers              Number of buffer lists represented by
  *                                      the pIntermediateBuffers parameter.
- *                                      Note: @ref cpaDcGetNumIntermediateBuffers()
- *                                      can be used to determine the number of
- *                                      intermediate buffers that an implementation
- *                                      requires.
+ *                                      Note: @ref
+ *                                      cpaDcGetNumIntermediateBuffers() can
+ *                                      be used to determine the number of
+ *                                      intermediate buffers that an
+ *                                      implementation requires.
  * @param[in]   pIntermediateBuffers    Optional pointer to Instance specific
  *                                      DRAM buffer.
  *
@@ -2889,10 +2905,9 @@ cpaDcGetNumIntermediateBuffers(CpaInstanceHandle instanceHandle,
  *      cpaDcGetNumIntermediateBuffers()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcStartInstance(CpaInstanceHandle instanceHandle,
-        Cpa16U numBuffers,
-        CpaBufferList **pIntermediateBuffers);
+CpaStatus cpaDcStartInstance(CpaInstanceHandle instanceHandle,
+                             Cpa16U numBuffers,
+                             CpaBufferList **pIntermediateBuffers);
 
 /**
  *****************************************************************************
@@ -2947,9 +2962,7 @@ cpaDcStartInstance(CpaInstanceHandle instanceHandle,
  *      cpaDcStartInstance()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcStopInstance(CpaInstanceHandle instanceHandle);
-
+CpaStatus cpaDcStopInstance(CpaInstanceHandle instanceHandle);
 
 /**
  *****************************************************************************
@@ -2998,16 +3011,15 @@ cpaDcStopInstance(CpaInstanceHandle instanceHandle);
  *      CpaInstanceInfo2
  *
  *****************************************************************************/
-CpaStatus
-cpaDcInstanceGetInfo2(const CpaInstanceHandle instanceHandle,
-        CpaInstanceInfo2 * pInstanceInfo2);
+CpaStatus cpaDcInstanceGetInfo2(const CpaInstanceHandle instanceHandle,
+                                CpaInstanceInfo2 *pInstanceInfo2);
 
 /*****************************************************************************/
 /* Instance Notification Functions                                           */
 /*****************************************************************************/
 /**
  *****************************************************************************
-  * @ingroup cpaDc
+ * @ingroup cpaDc
  *      Callback function for instance notification support.
  *
  * @description
@@ -3049,9 +3061,9 @@ cpaDcInstanceGetInfo2(const CpaInstanceHandle instanceHandle,
  *
  *****************************************************************************/
 typedef void (*CpaDcInstanceNotificationCbFunc)(
-        const CpaInstanceHandle instanceHandle,
-        void * pCallbackTag,
-        const CpaInstanceEvent instanceEvent);
+    const CpaInstanceHandle instanceHandle,
+    void *pCallbackTag,
+    const CpaInstanceEvent instanceEvent);
 
 /**
  *****************************************************************************
@@ -3096,12 +3108,10 @@ typedef void (*CpaDcInstanceNotificationCbFunc)(
  *      CpaDcInstanceNotificationCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaDcInstanceSetNotificationCb(
-        const CpaInstanceHandle instanceHandle,
-        const CpaDcInstanceNotificationCbFunc pInstanceNotificationCb,
-        void *pCallbackTag);
-
+CpaStatus cpaDcInstanceSetNotificationCb(
+    const CpaInstanceHandle instanceHandle,
+    const CpaDcInstanceNotificationCbFunc pInstanceNotificationCb,
+    void *pCallbackTag);
 
 /**
  *****************************************************************************
@@ -3177,11 +3187,10 @@ cpaDcInstanceSetNotificationCb(
  *      cpaDcInitSession()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcGetSessionSize(CpaInstanceHandle dcInstance,
-        CpaDcSessionSetupData* pSessionData,
-        Cpa32U* pSessionSize, Cpa32U* pContextSize );
-
+CpaStatus cpaDcGetSessionSize(CpaInstanceHandle dcInstance,
+                              CpaDcSessionSetupData *pSessionData,
+                              Cpa32U *pSessionSize,
+                              Cpa32U *pContextSize);
 
 /**
  *****************************************************************************
@@ -3232,11 +3241,9 @@ cpaDcGetSessionSize(CpaInstanceHandle dcInstance,
  *      cpaDcGetInstances()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcBufferListGetMetaSize(const CpaInstanceHandle instanceHandle,
-        Cpa32U numBuffers,
-        Cpa32U *pSizeInBytes);
-
+CpaStatus cpaDcBufferListGetMetaSize(const CpaInstanceHandle instanceHandle,
+                                     Cpa32U numBuffers,
+                                     Cpa32U *pSizeInBytes);
 
 /**
  *****************************************************************************
@@ -3249,8 +3256,8 @@ cpaDcBufferListGetMetaSize(const CpaInstanceHandle instanceHandle,
  *      client can invoke this function to get a string which describes the
  *      general error condition, and if available additional information on
  *      the specific error.
- *      The Client MUST allocate CPA_STATUS_MAX_STR_LENGTH_IN_BYTES bytes for  the buffer
- *      string.
+ *      The Client MUST allocate CPA_STATUS_MAX_STR_LENGTH_IN_BYTES bytes for
+ *      the buffer string.
  *
  * @context
  *      This function may be called from any context.
@@ -3290,11 +3297,9 @@ cpaDcBufferListGetMetaSize(const CpaInstanceHandle instanceHandle,
  *
  *****************************************************************************/
 
-CpaStatus
-cpaDcGetStatusText(const CpaInstanceHandle dcInstance,
-                   const CpaStatus errStatus,
-                   Cpa8S * pStatusText);
-
+CpaStatus cpaDcGetStatusText(const CpaInstanceHandle dcInstance,
+                             const CpaStatus errStatus,
+                             Cpa8S *pStatusText);
 
 /**
  *****************************************************************************
@@ -3336,9 +3341,8 @@ cpaDcGetStatusText(const CpaInstanceHandle dcInstance,
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcSetAddressTranslation(const CpaInstanceHandle instanceHandle,
-                           CpaVirtualToPhysical virtual2Physical);
+CpaStatus cpaDcSetAddressTranslation(const CpaInstanceHandle instanceHandle,
+                                     CpaVirtualToPhysical virtual2Physical);
 #ifdef __cplusplus
 } /* close the extern "C" { */
 #endif

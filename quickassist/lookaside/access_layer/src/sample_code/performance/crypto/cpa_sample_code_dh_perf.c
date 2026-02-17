@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  *
  ***************************************************************************/
@@ -108,6 +56,8 @@
 #include "qat_perf_cycles.h"
 extern Cpa32U packageIdCount_g;
 
+void dhPerformance(single_thread_test_data_t *testSetup);
+
 /*****************************************************************************
  * @ingroup dhThreads
  *
@@ -133,8 +83,8 @@ void dhCallback(void *pCallbackTag,
  * phase 1 operation ie x in PublicValue = g^x mod p
  *
  ****************************************************************************/
-void dhPhase1GenX(CpaCyDhPhase1KeyGenOpData *pCpaDhOpDataP1,
-                  asym_test_params_t *setup)
+static void dhPhase1GenX(CpaCyDhPhase1KeyGenOpData *pCpaDhOpDataP1,
+                         asym_test_params_t *setup)
 {
     /*Choose x by some random method, where 0 < x < p-1*/
     generateRandomData(pCpaDhOpDataP1->privateValueX.pData,
@@ -961,7 +911,6 @@ static CpaStatus dhPerform(asym_test_params_t *setup)
     CpaBoolean stopAtPhase1 = CPA_FALSE;
     CpaInstanceInfo2 *instanceInfo2 = NULL;
 
-
     status = sampleCodeCyGetNode(setup->cyInstanceHandle, &node);
     if (CPA_STATUS_SUCCESS != status)
     {
@@ -1207,7 +1156,7 @@ static CpaStatus dhPerform(asym_test_params_t *setup)
  * @description
  * Print the diffie hellman performance stats
  *****************************************************************************/
-CpaStatus dhPrintStats(thread_creation_data_t *data)
+static CpaStatus dhPrintStats(thread_creation_data_t *data)
 {
     if (DH_PHASE_1 == ((asym_test_params_t *)data->setupPtr)->phase)
     {
@@ -1313,7 +1262,8 @@ void dhPerformance(single_thread_test_data_t *testSetup)
 
 #ifdef SC_DEV_INFO_ENABLED
     /* check whether asym service enabled or not for the instance */
-    status = cpaGetDeviceInfo(instanceInfo->physInstId.packageId, &deviceInfo);
+    status =
+        cpaGetDeviceInfo(instanceInfo->physInstId.acceleratorId, &deviceInfo);
     if (CPA_STATUS_SUCCESS != status)
     {
         PRINT_ERR("%s::%d cpaGetDeviceInfo failed", __func__, __LINE__);

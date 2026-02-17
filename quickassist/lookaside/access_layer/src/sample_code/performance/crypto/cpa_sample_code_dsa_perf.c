@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -221,6 +169,20 @@ static Cpa8U dsa_3072_256_q[] = {
     0x3c, 0x9c, 0xb8, 0xa3, 0x06, 0xee, 0x25, 0x68, 0xdc, 0x22, 0x8c,
     0x4a, 0x39, 0x96, 0x01, 0xe3, 0x57, 0x93, 0xf4, 0x4e, 0x41};
 extern Cpa32U packageIdCount_g;
+void dsaGenRandom(CpaFlatBuffer *dsaRand, CpaFlatBuffer *dsaQ);
+CpaStatus dsaGenG(CpaInstanceHandle instanceHandle,
+                  CpaCyDsaGParamGenOpData *gOpData,
+                  CpaFlatBuffer *dsaG);
+CpaStatus dsaGenY(CpaInstanceHandle instanceHandle,
+                  CpaCyDsaYParamGenOpData *yOpData,
+                  CpaFlatBuffer *dsaY);
+CpaStatus dsaGenRS(CpaInstanceHandle instanceHandle,
+                   CpaCyDsaRSSignOpData *rsOpData,
+                   CpaFlatBuffer *dsaR,
+                   CpaFlatBuffer *dsaS);
+void dsaPerformance(single_thread_test_data_t *testSetup);
+CpaStatus dsaPerform(dsa_test_params_t *setup);
+void dsaSignPerformance(single_thread_test_data_t *testSetup);
 
 /**
  *****************************************************************************
@@ -688,7 +650,6 @@ CpaStatus dsaGenZ(CpaInstanceHandle instanceHandle,
      *       N = outLen so Z = digest of msg
      */
 
-
     CpaCyCapabilitiesInfo cap = {0};
 
     status = getCySpecificInstanceCapabilities(instanceHandle, &cap);
@@ -733,20 +694,20 @@ CpaStatus dsaGenZ(CpaInstanceHandle instanceHandle,
  *      free all memory used in DSA performance code in this file
  *
  *****************************************************************************/
-void freeDsaMem(dsa_test_params_t *setup,
-                CpaFlatBuffer *dsaX,
-                CpaFlatBuffer *dsaY,
-                CpaFlatBuffer *dsaK,
-                CpaFlatBuffer *dsaM,
-                CpaFlatBuffer *dsaZ,
-                CpaFlatBuffer *dsaR,
-                CpaFlatBuffer *dsaS,
-                CpaCyDsaVerifyOpData *verifyOpData,
-                CpaCyDsaRSSignOpData *rsOpData,
-                CpaFlatBuffer dsaG,
-                CpaFlatBuffer dsaP,
-                CpaFlatBuffer dsaH,
-                CpaFlatBuffer dsaQ)
+static void freeDsaMem(dsa_test_params_t *setup,
+                       CpaFlatBuffer *dsaX,
+                       CpaFlatBuffer *dsaY,
+                       CpaFlatBuffer *dsaK,
+                       CpaFlatBuffer *dsaM,
+                       CpaFlatBuffer *dsaZ,
+                       CpaFlatBuffer *dsaR,
+                       CpaFlatBuffer *dsaS,
+                       CpaCyDsaVerifyOpData *verifyOpData,
+                       CpaCyDsaRSSignOpData *rsOpData,
+                       CpaFlatBuffer dsaG,
+                       CpaFlatBuffer dsaP,
+                       CpaFlatBuffer dsaH,
+                       CpaFlatBuffer dsaQ)
 {
     freeArrayFlatBufferNUMA(dsaX, setup->numBuffers);
     freeArrayFlatBufferNUMA(dsaY, setup->numBuffers);
@@ -878,25 +839,6 @@ CpaStatus dsaPerform(dsa_test_params_t *setup)
 #endif
     DECLARE_IA_CYCLE_COUNT_VARIABLES();
 
-#ifdef POLL_INLINE
-    instanceInfo2 = qaeMemAlloc(sizeof(CpaInstanceInfo2));
-    if (instanceInfo2 == NULL)
-    {
-        PRINT_ERR("Failed to allocate memory for instanceInfo2");
-        return CPA_STATUS_FAIL;
-    }
-    memset(instanceInfo2, 0, sizeof(CpaInstanceInfo2));
-
-    if (poll_inline_g)
-    {
-        status = cpaCyInstanceGetInfo2(setup->cyInstanceHandle, instanceInfo2);
-        if (CPA_STATUS_SUCCESS != status)
-        {
-            PRINT_ERR("cpaCyInstanceGetInfo2 error, status: %d\n", status);
-            goto barrier;
-        }
-    }
-#endif
     status = sampleCodeCyGetNode(setup->cyInstanceHandle, &node);
     if (CPA_STATUS_SUCCESS != status)
     {
@@ -945,6 +887,7 @@ CpaStatus dsaPerform(dsa_test_params_t *setup)
     {
         PRINT_ERR("P & Q len not supported\n");
         /*thread status is init to fail so just return fail here*/
+        status = CPA_STATUS_FAIL;
         goto barrier;
     }
     /* Completion used in callback */
@@ -1154,6 +1097,28 @@ CpaStatus dsaPerform(dsa_test_params_t *setup)
         cbFunc = dsaVerifyCb;
     }
 
+#ifdef POLL_INLINE
+    instanceInfo2 = qaeMemAlloc(sizeof(CpaInstanceInfo2));
+    if (instanceInfo2 == NULL)
+    {
+        PRINT_ERR("Failed to allocate memory for instanceInfo2");
+        FREE_DSA_MEM;
+        return CPA_STATUS_FAIL;
+    }
+    memset(instanceInfo2, 0, sizeof(CpaInstanceInfo2));
+    if (poll_inline_g)
+    {
+        status = cpaCyInstanceGetInfo2(setup->cyInstanceHandle, instanceInfo2);
+        if (CPA_STATUS_SUCCESS != status)
+        {
+            PRINT_ERR("cpaCyInstanceGetInfo2 error, status: %d\n", status);
+            FREE_DSA_MEM;
+            qaeMemFree((void **)&instanceInfo2);
+            status = CPA_STATUS_FAIL;
+        }
+    }
+#endif
+
     /************************************************************************
      * STAGE 2 repeatedly verify all the signatures and measure the performance
      *************************************************************************
@@ -1165,9 +1130,6 @@ barrier:
     /* exiting the function if any failure occurs in previous steps*/
     if (CPA_STATUS_SUCCESS != status)
     {
-#ifdef POLL_INLINE
-        qaeMemFree((void **)&instanceInfo2);
-#endif
         return status;
     }
     /* get a timestamp before submitting any requests. After submitting
@@ -1299,7 +1261,7 @@ EXPORT_SYMBOL(dsaPerform);
  *     and signed.
  *
  *****************************************************************************/
-CpaStatus dsaSignPerform(dsa_test_params_t *setup)
+static CpaStatus dsaSignPerform(dsa_test_params_t *setup)
 {
     Cpa32U i = 0;
     Cpa32U outerLoop = 0;
@@ -1350,25 +1312,6 @@ CpaStatus dsaSignPerform(dsa_test_params_t *setup)
 #endif
     DECLARE_IA_CYCLE_COUNT_VARIABLES();
 
-#ifdef POLL_INLINE
-    instanceInfo2 = qaeMemAlloc(sizeof(CpaInstanceInfo2));
-    if (instanceInfo2 == NULL)
-    {
-        PRINT_ERR("Failed to allocate memory for instanceInfo2");
-        return CPA_STATUS_FAIL;
-    }
-    memset(instanceInfo2, 0, sizeof(CpaInstanceInfo2));
-
-    if (poll_inline_g)
-    {
-        status = cpaCyInstanceGetInfo2(setup->cyInstanceHandle, instanceInfo2);
-        if (CPA_STATUS_SUCCESS != status)
-        {
-            PRINT_ERR("cpaCyInstanceGetInfo2 error, status: %d\n", status);
-            goto barrier;
-        }
-    }
-#endif
     status = sampleCodeCyGetNode(setup->cyInstanceHandle, &node);
     if (CPA_STATUS_SUCCESS != status)
     {
@@ -1418,6 +1361,7 @@ CpaStatus dsaSignPerform(dsa_test_params_t *setup)
     {
         PRINT_ERR("P & Q len not supported\n");
         /*thread status is init to fail so just return fail here*/
+        status = CPA_STATUS_FAIL;
         goto barrier;
     }
     /* Completion used in callback */
@@ -1600,6 +1544,28 @@ CpaStatus dsaSignPerform(dsa_test_params_t *setup)
         cbFunc = dsaSignRSCb;
     }
 
+#ifdef POLL_INLINE
+    instanceInfo2 = qaeMemAlloc(sizeof(CpaInstanceInfo2));
+    if (instanceInfo2 == NULL)
+    {
+        PRINT_ERR("Failed to allocate memory for instanceInfo2");
+        FREE_DSA_SIGN_MEM;
+        return CPA_STATUS_FAIL;
+    }
+    memset(instanceInfo2, 0, sizeof(CpaInstanceInfo2));
+    if (poll_inline_g)
+    {
+        status = cpaCyInstanceGetInfo2(setup->cyInstanceHandle, instanceInfo2);
+        if (CPA_STATUS_SUCCESS != status)
+        {
+            PRINT_ERR("cpaCyInstanceGetInfo2 error, status: %d\n", status);
+            FREE_DSA_SIGN_MEM;
+            qaeMemFree((void **)&instanceInfo2);
+            return CPA_STATUS_FAIL;
+        }
+    }
+#endif
+
     /************************************************************************
      * STAGE 2 repeatedly sign messages and measure the performance
      *************************************************************************
@@ -1610,9 +1576,6 @@ barrier:
     /* exiting the function if any failure occurs in previous steps*/
     if (CPA_STATUS_SUCCESS != status)
     {
-#ifdef POLL_INLINE
-        qaeMemFree((void **)&instanceInfo2);
-#endif
         return status;
     }
     /* get a timestamp before submitting any requests. After submitting
@@ -1741,7 +1704,7 @@ barrier:
  *     Print out the DSA performance
  *
  *****************************************************************************/
-CpaStatus dsaPrintStats(thread_creation_data_t *data)
+static CpaStatus dsaPrintStats(thread_creation_data_t *data)
 {
     PRINT("DSA VERIFY\n");
     PRINT("Modulus Size %19d\n", data->packetSize * NUM_BITS_IN_BYTE);
@@ -1758,7 +1721,7 @@ CpaStatus dsaPrintStats(thread_creation_data_t *data)
  *     Print out the DSA sign only performance
  *
  *****************************************************************************/
-CpaStatus dsaSignPrintStats(thread_creation_data_t *data)
+static CpaStatus dsaSignPrintStats(thread_creation_data_t *data)
 {
     PRINT("DSA SIGN\n");
     PRINT("Modulus Size %19d\n", data->packetSize * NUM_BITS_IN_BYTE);
@@ -1785,7 +1748,7 @@ static void dsaPerformanceGen(single_thread_test_data_t *testSetup,
     CpaInstanceHandle *cyInstances = NULL;
     CpaStatus status = CPA_STATUS_FAIL;
     dsa_test_params_t *params = (dsa_test_params_t *)testSetup->setupPtr;
-    CpaInstanceInfo2 instanceInfo = {0};
+    CpaInstanceInfo2 *instanceInfo = NULL;
 #ifdef SC_DEV_INFO_ENABLED
     CpaDeviceInfo deviceInfo = {0};
 #endif
@@ -1828,10 +1791,19 @@ static void dsaPerformanceGen(single_thread_test_data_t *testSetup,
         dsaSetup.performanceStats->threadReturnStatus = CPA_STATUS_FAIL;
         sampleCodeThreadExit();
     }
+    instanceInfo = qaeMemAlloc(sizeof(CpaInstanceInfo2));
+    if (instanceInfo == NULL)
+    {
+        PRINT_ERR("Failed to allocate memory for instanceInfo");
+        dsaSetup.performanceStats->threadReturnStatus = CPA_STATUS_FAIL;
+        sampleCodeThreadExit();
+    }
+    memset(instanceInfo, 0, sizeof(CpaInstanceInfo2));
     cyInstances = qaeMemAlloc(sizeof(CpaInstanceHandle) * numInstances);
     if (NULL == cyInstances)
     {
         PRINT_ERR("Could not allocate memory for logical instances\n");
+        qaeMemFree((void **)&instanceInfo);
         dsaSetup.performanceStats->threadReturnStatus = CPA_STATUS_FAIL;
         sampleCodeThreadExit();
     }
@@ -1841,23 +1813,26 @@ static void dsaPerformanceGen(single_thread_test_data_t *testSetup,
     dsaSetup.cyInstanceHandle =
         cyInstances[(testSetup->logicalQaInstance) % numInstances];
 
-    status = cpaCyInstanceGetInfo2(dsaSetup.cyInstanceHandle, &instanceInfo);
+    status = cpaCyInstanceGetInfo2(dsaSetup.cyInstanceHandle, instanceInfo);
     if (CPA_STATUS_SUCCESS != status)
     {
         PRINT_ERR("%s::%d cpaCyInstanceGetInfo2 failed", __func__, __LINE__);
         qaeMemFree((void **)&cyInstances);
+        qaeMemFree((void **)&instanceInfo);
         dsaSetup.performanceStats->threadReturnStatus = CPA_STATUS_FAIL;
         sampleCodeThreadExit();
     }
 
 #ifdef SC_DEV_INFO_ENABLED
     /* check whether asym service enabled or not for the instance */
-    status = cpaGetDeviceInfo(instanceInfo.physInstId.packageId, &deviceInfo);
+    status =
+        cpaGetDeviceInfo(instanceInfo->physInstId.acceleratorId, &deviceInfo);
     if (CPA_STATUS_SUCCESS != status)
     {
         PRINT_ERR("%s::%d cpaGetDeviceInfo failed", __func__, __LINE__);
         dsaSetup.performanceStats->threadReturnStatus = CPA_STATUS_FAIL;
         qaeMemFree((void **)&cyInstances);
+        qaeMemFree((void **)&instanceInfo);
         sampleCodeThreadExit();
     }
     if (CPA_FALSE == deviceInfo.cyAsymEnabled)
@@ -1868,15 +1843,15 @@ static void dsaPerformanceGen(single_thread_test_data_t *testSetup,
                   __LINE__);
         dsaSetup.performanceStats->threadReturnStatus = CPA_STATUS_FAIL;
         qaeMemFree((void **)&cyInstances);
+        qaeMemFree((void **)&instanceInfo);
         sampleCodeThreadExit();
     }
 #endif
-    if (instanceInfo.physInstId.packageId > packageIdCount_g)
+    if (instanceInfo->physInstId.packageId > packageIdCount_g)
     {
-        packageIdCount_g = instanceInfo.physInstId.packageId;
+        packageIdCount_g = instanceInfo->physInstId.packageId;
     }
-    dsaSetup.performanceStats->packageId = instanceInfo.physInstId.packageId;
-
+    dsaSetup.performanceStats->packageId = instanceInfo->physInstId.packageId;
 
     /*launch function that does all the work */
     if (DSA_STEP_VERIFY == step)
@@ -1898,6 +1873,7 @@ static void dsaPerformanceGen(single_thread_test_data_t *testSetup,
         dsaSetup.performanceStats->threadReturnStatus = CPA_STATUS_FAIL;
     }
     qaeMemFree((void **)&cyInstances);
+    qaeMemFree((void **)&instanceInfo);
     sampleCodeThreadComplete(testSetup->threadID);
 }
 

@@ -1,62 +1,10 @@
 /*****************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  *****************************************************************************/
 
@@ -2321,6 +2269,7 @@ CpaStatus cpaCyInstanceGetInfo2(const CpaInstanceHandle instanceHandle_in,
     char keyStr[ADF_CFG_MAX_KEY_LEN_IN_BYTES] = { 0 };
     char valStr[ADF_CFG_MAX_VAL_LEN_IN_BYTES] = { 0 };
     char *section = DYN_SEC;
+    Cpa32S strSize = 0;
 
 #ifdef ICP_TRACE
     LAC_LOG2("Called with params (0x%lx, 0x%lx)\n",
@@ -2399,7 +2348,8 @@ CpaStatus cpaCyInstanceGetInfo2(const CpaInstanceHandle instanceHandle_in,
 
     /* Get the instance name and part name*/
     dev = icp_adf_getAccelDevByAccelId(pCryptoService->pkgID);
-    if (NULL == dev)
+    if (NULL == dev ||
+        0 == strnlen(dev->deviceName, ADF_DEVICE_TYPE_LENGTH + 1))
     {
         LAC_LOG_ERROR("Can not find device for the instance\n");
         LAC_OS_BZERO(pInstanceInfo2, sizeof(CpaInstanceInfo2));
@@ -2423,13 +2373,17 @@ CpaStatus cpaCyInstanceGetInfo2(const CpaInstanceHandle instanceHandle_in,
     status = icp_adf_cfgGetParamValue(dev, section, keyStr, valStr);
     LAC_CHECK_STATUS(status);
 
-    snprintf(
+    strSize = snprintf(
         (char *)pInstanceInfo2->instName, CPA_INST_NAME_SIZE, "%s", valStr);
-    snprintf((char *)pInstanceInfo2->instID,
-             CPA_INST_ID_SIZE,
-             "%s_%s",
-             section,
-             valStr);
+    LAC_CHECK_PARAM_RANGE(strSize, 1, CPA_INST_NAME_SIZE);
+
+    strSize = snprintf((char *)pInstanceInfo2->instID,
+                       CPA_INST_ID_SIZE,
+                       "%s_%s",
+                       section,
+                       valStr);
+    LAC_CHECK_PARAM_RANGE(strSize, 1, CPA_INST_ID_SIZE);
+
     return CPA_STATUS_SUCCESS;
 }
 
@@ -2821,51 +2775,6 @@ CpaStatus icp_sal_CyPollAsymRing(CpaInstanceHandle instanceHandle_in,
     return status;
 }
 
-/**
- ******************************************************************************
- * @ingroup cpaCyCommon
- * Crypto specific polling function which polls an nrbg crypto ring.
- *****************************************************************************/
-CpaStatus icp_sal_CyPollNRBGRing(CpaInstanceHandle instanceHandle_in,
-                                 Cpa32U response_quota)
-{
-#ifdef ICP_NRBG_SUPPORTED
-    CpaStatus status = CPA_STATUS_SUCCESS;
-    sal_crypto_service_t *crypto_handle = NULL;
-    icp_comms_trans_handle trans_hndTable[NUM_CRYPTO_NRBG_RX_RINGS] = { 0 };
-
-    if (CPA_INSTANCE_HANDLE_SINGLE == instanceHandle_in)
-    {
-        crypto_handle =
-            (sal_crypto_service_t *)Lac_GetFirstHandle(SAL_SERVICE_TYPE_CRYPTO);
-    }
-    else
-    {
-        crypto_handle = (sal_crypto_service_t *)instanceHandle_in;
-    }
-    LAC_CHECK_NULL_PARAM(crypto_handle);
-    SAL_RUNNING_CHECK(crypto_handle);
-    SAL_CHECK_INSTANCE_TYPE(crypto_handle,
-                            (SAL_SERVICE_TYPE_CRYPTO |
-                             SAL_SERVICE_TYPE_CRYPTO_ASYM |
-                             SAL_SERVICE_TYPE_CRYPTO_SYM));
-
-    /*
-     * From the instanceHandle we must get the trans_handle and send
-     * down to adf for polling.
-     * Populate our trans handle table with the appropriate handles.
-     */
-
-    trans_hndTable[TH_SINGLE_RX] = crypto_handle->trans_handle_nrbg_rx;
-    /* Call adf to do the polling. */
-    status = icp_adf_pollInstance(
-        trans_hndTable, NUM_CRYPTO_NRBG_RX_RINGS, response_quota);
-    return status;
-#else
-    return CPA_STATUS_UNSUPPORTED;
-#endif
-}
-
 /* Returns the handle to the first asym crypto instance */
 STATIC CpaInstanceHandle
 Lac_GetFirstAsymHandle(icp_accel_dev_t *adfInsts[ADF_MAX_DEVICES],
@@ -2967,7 +2876,6 @@ CpaInstanceHandle Lac_GetFirstHandle(sal_service_type_t svc_type)
         default:
             LAC_LOG_ERROR("Invalid service type\n");
             return NULL;
-            break;
     }
     /* Only need 1 dev with crypto enabled - so check all devices*/
     status = icp_amgr_getAllAccelDevByEachCapability(
@@ -3010,29 +2918,6 @@ CpaInstanceHandle Lac_GetFirstHandle(sal_service_type_t svc_type)
         LAC_LOG_ERROR("No remaining crypto instances available\n");
     }
     return cyInst;
-}
-
-CpaStatus icp_sal_NrbgGetInflightRequests(CpaInstanceHandle instanceHandle,
-                                          Cpa32U *maxInflightRequests,
-                                          Cpa32U *numInflightRequests)
-{
-#ifdef ICP_NRBG_SUPPORTED
-    sal_crypto_service_t *crypto_handle = NULL;
-
-    crypto_handle = (sal_crypto_service_t *)instanceHandle;
-
-    LAC_CHECK_NULL_PARAM(crypto_handle);
-    SAL_CHECK_INSTANCE_TYPE(instanceHandle, SAL_SERVICE_TYPE_CRYPTO);
-    LAC_CHECK_NULL_PARAM(maxInflightRequests);
-    LAC_CHECK_NULL_PARAM(numInflightRequests);
-    SAL_RUNNING_CHECK(crypto_handle);
-
-    return icp_adf_getInflightRequests(crypto_handle->trans_handle_nrbg_tx,
-                                       maxInflightRequests,
-                                       numInflightRequests);
-#else
-    return CPA_STATUS_UNSUPPORTED;
-#endif
 }
 
 CpaStatus icp_sal_SymGetInflightRequests(CpaInstanceHandle instanceHandle,
@@ -3095,4 +2980,20 @@ CpaStatus icp_sal_AsymPerformOpNow(CpaInstanceHandle instanceHandle)
     status = icp_adf_flush_requests(crypto_handle->trans_handle_asym_tx);
 
     return status;
+}
+
+CpaStatus icp_sal_setForceAEADMACVerify(CpaInstanceHandle instanceHandle,
+                                        CpaBoolean forceAEADMacVerify)
+{
+    return CPA_STATUS_UNSUPPORTED;
+}
+
+CpaStatus icp_sal_CyGetFileDescriptor(CpaInstanceHandle instanceHandle, int *fd)
+{
+    return CPA_STATUS_UNSUPPORTED;
+}
+
+CpaStatus icp_sal_CyPutFileDescriptor(CpaInstanceHandle instanceHandle, int fd)
+{
+    return CPA_STATUS_UNSUPPORTED;
 }

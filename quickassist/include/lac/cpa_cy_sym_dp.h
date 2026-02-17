@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -159,13 +107,13 @@ extern "C" {
  *      this handle is allocated by the client. The size of the memory that
  *      the client needs to allocate is determined by a call to the @ref
  *      cpaCySymDpSessionCtxGetSize or @ref cpaCySymDpSessionCtxGetDynamicSize
- *      functions. The session context memory is initialized with a call to 
+ *      functions. The session context memory is initialized with a call to
  *      the @ref cpaCySymInitSession function.
  *      This memory MUST not be freed until a call to @ref
  *      cpaCySymDpRemoveSession has completed successfully.
  *
  *****************************************************************************/
-typedef void * CpaCySymDpSessionCtx;
+typedef void *CpaCySymDpSessionCtx;
 
 /**
  *****************************************************************************
@@ -185,7 +133,8 @@ typedef void * CpaCySymDpSessionCtx;
  * @see
  *        cpaCySymDpEnqueueOp, cpaCySymDpEnqueueOpBatch
  ****************************************************************************/
-typedef struct _CpaCySymDpOpData {
+typedef struct _CpaCySymDpOpData
+{
     Cpa64U reserved0;
     /**< Reserved for internal usage. */
     Cpa32U cryptoStartSrcOffsetInBytes;
@@ -345,12 +294,12 @@ typedef struct _CpaCySymDpOpData {
      *   srcBuffer contains the location where a @ref CpaPhysBufferList is
      *   stored.  In this case, the CpaPhysBufferList MUST be aligned
      *   on an 8-byte boundary.
-     * - For optimum performance, the buffer should only contain the data 
-     *   region that the cryptographic operation(s) must be performed on. 
-     *   Any additional data in the source buffer may be copied to the 
+     * - For optimum performance, the buffer should only contain the data
+     *   region that the cryptographic operation(s) must be performed on.
+     *   Any additional data in the source buffer may be copied to the
      *   destination buffer and this copy may degrade performance.
      */
-    Cpa32U  srcBufferLen;
+    Cpa32U srcBufferLen;
     /**< Length of source buffer, or @ref CPA_DP_BUFLIST. */
     CpaPhysicalAddr dstBuffer;
     /**< Physical address of the destination buffer on which to operate.
@@ -365,13 +314,13 @@ typedef struct _CpaCySymDpOpData {
      * For "in-place" operation, the dstBuffer may be identical to the
      * srcBuffer.
      */
-    Cpa32U  dstBufferLen;
+    Cpa32U dstBufferLen;
     /**< Length of destination buffer, or @ref CPA_DP_BUFLIST. */
 
     CpaPhysicalAddr thisPhys;
     /**< Physical address of this data structure */
 
-    Cpa8U* pIv;
+    Cpa8U *pIv;
     /**< Pointer to (and therefore, the virtual address of) the IV field
      * above.
      * Needed here because the driver in some cases writes to this field,
@@ -383,7 +332,7 @@ typedef struct _CpaCySymDpOpData {
      * Needed here because the driver in some cases writes to this field,
      * in addition to sending it to the accelerator.
      */
-    void* pCallbackTag;
+    void *pCallbackTag;
     /**< Opaque data that will be returned to the client in the function
      * completion callback.
      *
@@ -442,9 +391,8 @@ typedef struct _CpaCySymDpOpData {
  *      cpaCySymDpRegCbFunc
  *****************************************************************************/
 typedef void (*CpaCySymDpCbFunc)(CpaCySymDpOpData *pOpData,
-        CpaStatus status,
-        CpaBoolean verifyResult);
-
+                                 CpaStatus status,
+                                 CpaBoolean verifyResult);
 
 /**
  *****************************************************************************
@@ -491,7 +439,7 @@ typedef void (*CpaCySymDpCbFunc)(CpaCySymDpOpData *pOpData,
  *      CpaCySymDpCbFunc
  *****************************************************************************/
 CpaStatus cpaCySymDpRegCbFunc(const CpaInstanceHandle instanceHandle,
-        const CpaCySymDpCbFunc pSymNewCb);
+                              const CpaCySymDpCbFunc pSymNewCb);
 
 /**
  *****************************************************************************
@@ -509,15 +457,15 @@ CpaStatus cpaCySymDpRegCbFunc(const CpaInstanceHandle instanceHandle,
  *      cpaCySymDpSessionCtxGetSize() will always return the same size and that
  *      the size will not be different for different setup data parameters.
  *      However, it should be noted that the size may change:
- *        (1) between different implementations of the API (e.g. between software
- *            and hardware implementations or between different hardware
- *            implementations)
+ *        (1) between different implementations of the API (e.g. between
+ *            software and hardware implementations or between different
+ *            hardware implementations)
  *        (2) between different releases of the same API implementation.
  *
- *      The size returned by this function is the smallest size needed to 
+ *      The size returned by this function is the smallest size needed to
  *      support all possible combinations of setup data parameters. Some
- *      setup data parameter combinations may fit within a smaller session 
- *      context size. The alternate cpaCySymDpSessionCtxGetDynamicSize() 
+ *      setup data parameter combinations may fit within a smaller session
+ *      context size. The alternate cpaCySymDpSessionCtxGetDynamicSize()
  *      function will return the smallest size needed to fit the
  *      provided setup data parameters.
  *
@@ -562,29 +510,29 @@ CpaStatus cpaCySymDpRegCbFunc(const CpaInstanceHandle instanceHandle,
  *      cpaCySymDpSessionCtxGetDynamicSize()
  *      cpaCySymDpInitSession()
  *****************************************************************************/
-CpaStatus
-cpaCySymDpSessionCtxGetSize(const CpaInstanceHandle instanceHandle,
-        const CpaCySymSessionSetupData *pSessionSetupData,
-        Cpa32U *pSessionCtxSizeInBytes);
+CpaStatus cpaCySymDpSessionCtxGetSize(
+    const CpaInstanceHandle instanceHandle,
+    const CpaCySymSessionSetupData *pSessionSetupData,
+    Cpa32U *pSessionCtxSizeInBytes);
 
 /**
  *****************************************************************************
  * @ingroup cpaCySymDp
- *      Gets the minimum size required to store a session context for the data 
+ *      Gets the minimum size required to store a session context for the data
  *      plane API.
  *
  * @description
  *      This function is used by the client to determine the smallest size of
- *      the memory it must allocate in order to store the session context. 
- *      This MUST be called before the client allocates the memory for the 
- *      session context and before the client calls the 
+ *      the memory it must allocate in order to store the session context.
+ *      This MUST be called before the client allocates the memory for the
+ *      session context and before the client calls the
  *      @ref cpaCySymDpInitSession function.
  *
  *      This function is an alternate to cpaCySymDpSessionGetSize().
- *      cpaCySymDpSessionCtxGetSize() will return a fixed size which is the 
- *      minimum memory size needed to support all possible setup data parameter 
- *      combinations. cpaCySymDpSessionCtxGetDynamicSize() will return the 
- *      minimum memory size needed to support the specific session setup 
+ *      cpaCySymDpSessionCtxGetSize() will return a fixed size which is the
+ *      minimum memory size needed to support all possible setup data parameter
+ *      combinations. cpaCySymDpSessionCtxGetDynamicSize() will return the
+ *      minimum memory size needed to support the specific session setup
  *      data parameters provided. This size may be different for different setup
  *      data parameters.
  *
@@ -629,10 +577,10 @@ cpaCySymDpSessionCtxGetSize(const CpaInstanceHandle instanceHandle,
  *      cpaCySymDpSessionCtxGetSize()
  *      cpaCySymDpInitSession()
  *****************************************************************************/
-CpaStatus
-cpaCySymDpSessionCtxGetDynamicSize(const CpaInstanceHandle instanceHandle,
-        const CpaCySymSessionSetupData *pSessionSetupData,
-        Cpa32U *pSessionCtxSizeInBytes);
+CpaStatus cpaCySymDpSessionCtxGetDynamicSize(
+    const CpaInstanceHandle instanceHandle,
+    const CpaCySymSessionSetupData *pSessionSetupData,
+    Cpa32U *pSessionCtxSizeInBytes);
 
 /**
  *****************************************************************************
@@ -700,10 +648,10 @@ cpaCySymDpSessionCtxGetDynamicSize(const CpaInstanceHandle instanceHandle,
  * @see
  *      cpaCySymDpSessionCtxGetSize, cpaCySymDpRemoveSession
  *****************************************************************************/
-CpaStatus
-cpaCySymDpInitSession(CpaInstanceHandle instanceHandle,
-        const CpaCySymSessionSetupData *pSessionSetupData,
-        CpaCySymDpSessionCtx sessionCtx);
+CpaStatus cpaCySymDpInitSession(
+    CpaInstanceHandle instanceHandle,
+    const CpaCySymSessionSetupData *pSessionSetupData,
+    CpaCySymDpSessionCtx sessionCtx);
 
 /**
  *****************************************************************************
@@ -758,10 +706,8 @@ cpaCySymDpInitSession(CpaInstanceHandle instanceHandle,
  *      cpaCySymDpInitSession()
  *
  *****************************************************************************/
-CpaStatus
-cpaCySymDpRemoveSession(const CpaInstanceHandle instanceHandle,
-        CpaCySymDpSessionCtx sessionCtx);
-
+CpaStatus cpaCySymDpRemoveSession(const CpaInstanceHandle instanceHandle,
+                                  CpaCySymDpSessionCtx sessionCtx);
 
 /**
  *****************************************************************************
@@ -812,13 +758,13 @@ cpaCySymDpRemoveSession(const CpaInstanceHandle instanceHandle,
  *                              See the above Description for restrictions
  *                              that apply to this parameter.
  * @param[in] performOpNow      Flag to specify whether the operation should be
- *                                 performed immediately (CPA_TRUE), or simply
- *                                 enqueued to be performed later (CPA_FALSE).
- *                                 In the latter case, the request is submitted
- *                                 to be performed either by calling this function
- *                                 again with this flag set to CPA_TRUE, or by
- *                                 invoking the function @ref
- *                                 cpaCySymDpPerformOpNow.
+ *                              performed immediately (CPA_TRUE), or simply
+ *                              enqueued to be performed later (CPA_FALSE).
+ *                              In the latter case, the request is submitted
+ *                              to be performed either by calling this
+ *                              function again with this flag set to CPA_TRUE,
+ *                              or by invoking the function
+ *@ref cpaCySymDpPerformOpNow.
  *
  * @retval CPA_STATUS_SUCCESS        Function executed successfully.
  * @retval CPA_STATUS_FAIL           Function failed.
@@ -846,10 +792,8 @@ cpaCySymDpRemoveSession(const CpaInstanceHandle instanceHandle,
  *      cpaCySymDpInitSession,
  *      cpaCySymDpPerformOpNow
  *****************************************************************************/
-CpaStatus
-cpaCySymDpEnqueueOp(CpaCySymDpOpData *pOpData,
-        const CpaBoolean performOpNow);
-
+CpaStatus cpaCySymDpEnqueueOp(CpaCySymDpOpData *pOpData,
+                              const CpaBoolean performOpNow);
 
 /**
  *****************************************************************************
@@ -911,13 +855,13 @@ cpaCySymDpEnqueueOp(CpaCySymDpOpData *pOpData,
  *                              See the above Description for restrictions
  *                              that apply to this parameter.
  * @param[in] performOpNow      Flag to specify whether the operation should be
- *                                 performed immediately (CPA_TRUE), or simply
- *                                 enqueued to be performed later (CPA_FALSE).
- *                                 In the latter case, the request is submitted
- *                                 to be performed either by calling this function
- *                                 again with this flag set to CPA_TRUE, or by
- *                                 invoking the function @ref
- *                                 cpaCySymDpPerformOpNow.
+ *                              performed immediately (CPA_TRUE), or simply
+ *                              enqueued to be performed later (CPA_FALSE).
+ *                              In the latter case, the request is submitted
+ *                              to be performed either by calling this function
+ *                              again with this flag set to CPA_TRUE, or by
+ *                              invoking the function @ref
+ *                              cpaCySymDpPerformOpNow.
  *
  * @retval CPA_STATUS_SUCCESS        Function executed successfully.
  * @retval CPA_STATUS_FAIL           Function failed.
@@ -946,11 +890,9 @@ cpaCySymDpEnqueueOp(CpaCySymDpOpData *pOpData,
  *      cpaCySymDpInitSession,
  *      cpaCySymDpEnqueueOp
  *****************************************************************************/
-CpaStatus
-cpaCySymDpEnqueueOpBatch(const Cpa32U numberRequests,
-        CpaCySymDpOpData *pOpData[],
-        const CpaBoolean performOpNow);
-
+CpaStatus cpaCySymDpEnqueueOpBatch(const Cpa32U numberRequests,
+                                   CpaCySymDpOpData *pOpData[],
+                                   const CpaBoolean performOpNow);
 
 /**
  *****************************************************************************
@@ -1001,9 +943,7 @@ cpaCySymDpEnqueueOpBatch(const Cpa32U numberRequests,
  * @see
  *      cpaCySymDpEnqueueOp, cpaCySymDpEnqueueOpBatch
  *****************************************************************************/
-CpaStatus
-cpaCySymDpPerformOpNow(CpaInstanceHandle instanceHandle);
-
+CpaStatus cpaCySymDpPerformOpNow(CpaInstanceHandle instanceHandle);
 
 #ifdef __cplusplus
 } /* close the extern "C" { */

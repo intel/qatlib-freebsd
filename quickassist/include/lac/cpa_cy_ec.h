@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -292,7 +240,7 @@ typedef struct _CpaCyEcCurveParametersWeierstrass
  *
  * @description
  *      This union allows for the characterisation of different curve types
- *      encapsulted in one data type. The intention is that new curve types
+ *      encapsulated in one data type. The intention is that new curve types
  *      will be added in the future.
  *
  * @note
@@ -301,8 +249,7 @@ typedef struct _CpaCyEcCurveParametersWeierstrass
  *      CpaCyEcCurveParametersWeierstrass
  *
  *****************************************************************************/
-typedef union _CpaCyEcCurveParameters
-{
+typedef union _CpaCyEcCurveParameters {
     CpaCyEcCurveParametersWeierstrass weierstrassParameters;
 } CpaCyEcCurveParameters;
 
@@ -370,7 +317,8 @@ typedef struct _CpaCyEcCurve
  *      cpaCyEcPointMultiply()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcPointMultiplyOpData {
+typedef struct _CpaCyEcPointMultiplyOpData
+{
     CpaFlatBuffer k;
     /**< scalar multiplier  (k > 0 and k < n) */
     CpaFlatBuffer xg;
@@ -421,12 +369,13 @@ typedef struct _CpaCyEcPointMultiplyOpData {
  *      cpaCyEcGenericPointMultiply()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcGenericPointMultiplyOpData {
-    CpaFlatBuffer  k;
+typedef struct _CpaCyEcGenericPointMultiplyOpData
+{
+    CpaFlatBuffer k;
     /** <scalar multiplier  (k > 0 and k < n) */
-    CpaFlatBuffer  xP;
+    CpaFlatBuffer xP;
     /** <x coordinate of public key */
-    CpaFlatBuffer  yP;
+    CpaFlatBuffer yP;
     /** <y coordinate of public key */
     CpaCyEcCurve *pCurve;
     /** <curve type specific parameters */
@@ -464,10 +413,11 @@ typedef struct _CpaCyEcGenericPointMultiplyOpData {
  *      cpaCyEcGenericPointVerify()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcGenericPointVerifyOpData {
-    CpaFlatBuffer  xP;
+typedef struct _CpaCyEcGenericPointVerifyOpData
+{
+    CpaFlatBuffer xP;
     /** <x coordinate of public key */
-    CpaFlatBuffer  yP;
+    CpaFlatBuffer yP;
     /** <y coordinate of public key */
     CpaCyEcCurve *pCurve;
     /** <curve type specific parameters */
@@ -507,21 +457,22 @@ typedef struct _CpaCyEcGenericPointVerifyOpData {
  *      cpaCyEcMontEdwdsPointMultiply()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcMontEdwdsPointMultiplyOpData {
+typedef struct _CpaCyEcMontEdwdsPointMultiplyOpData
+{
     CpaCyEcMontEdwdsCurveType curveType;
     /**< field type for the operation */
-    CpaBoolean  generator;
+    CpaBoolean generator;
     /**< True if the operation is a generator multiplication (kG)
-     *   False if it is a variable point multiplcation (kP). */
-    CpaFlatBuffer  k;
+     *   False if it is a variable point multiplication (kP). */
+    CpaFlatBuffer k;
     /**< k scalar multiplier for the operation */
-    CpaFlatBuffer  x;
+    CpaFlatBuffer x;
     /**< x value.  Used in scalar variable point multiplication operations.
      * Not required if the generator is True. Must be NULL if not required.
      * The size of the buffer MUST be 32B for 25519 curves and 64B for 448
      * curves */
-    CpaFlatBuffer  y;
-   /**< y value.  Used in variable point multiplication of operations.
+    CpaFlatBuffer y;
+    /**< y value.  Used in variable point multiplication of operations.
      * Not required if the generator is True.
      * Must be NULL if not required.
      * The size of the buffer MUST be 32B for 25519 curves and 64B for 448
@@ -556,7 +507,8 @@ typedef struct _CpaCyEcMontEdwdsPointMultiplyOpData {
  *      cpaCyEcPointVerify()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcPointVerifyOpData {
+typedef struct _CpaCyEcPointVerifyOpData
+{
     CpaFlatBuffer xq;
     /**< x coordinate candidate point */
     CpaFlatBuffer yq;
@@ -582,7 +534,8 @@ typedef struct _CpaCyEcPointVerifyOpData {
  *      initialized, and are collected per instance.
  *
  ****************************************************************************/
-typedef struct _CpaCyEcStats64 {
+typedef struct _CpaCyEcStats64
+{
     Cpa64U numEcPointMultiplyRequests;
     /**< Total number of EC Point Multiplication operation requests. */
     Cpa64U numEcPointMultiplyRequestErrors;
@@ -613,7 +566,6 @@ typedef struct _CpaCyEcStats64 {
     /**< Total number of EC Point Verification operation requests that had an
      * invalid output. Note that this does not indicate an error. */
 } CpaCyEcStats64;
-
 
 /**
  *****************************************************************************
@@ -655,12 +607,11 @@ typedef struct _CpaCyEcStats64 {
  *
  *****************************************************************************/
 typedef void (*CpaCyEcPointMultiplyCbFunc)(void *pCallbackTag,
-        CpaStatus status,
-        void *pOpData,
-        CpaBoolean multiplyStatus,
-        CpaFlatBuffer *pXk,
-        CpaFlatBuffer *pYk);
-
+                                           CpaStatus status,
+                                           void *pOpData,
+                                           CpaBoolean multiplyStatus,
+                                           CpaFlatBuffer *pXk,
+                                           CpaFlatBuffer *pYk);
 
 /**
  *****************************************************************************
@@ -701,10 +652,9 @@ typedef void (*CpaCyEcPointMultiplyCbFunc)(void *pCallbackTag,
  *
  *****************************************************************************/
 typedef void (*CpaCyEcPointVerifyCbFunc)(void *pCallbackTag,
-        CpaStatus status,
-        void *pOpData,
-        CpaBoolean verifyStatus);
-
+                                         CpaStatus status,
+                                         void *pOpData,
+                                         CpaBoolean verifyStatus);
 
 /**
  *****************************************************************************
@@ -776,13 +726,12 @@ typedef void (*CpaCyEcPointVerifyCbFunc)(void *pCallbackTag,
  *****************************************************************************/
 CpaStatus CPA_DEPRECATED
 cpaCyEcPointMultiply(const CpaInstanceHandle instanceHandle,
-        const CpaCyEcPointMultiplyCbFunc pCb,
-        void *pCallbackTag,
-        const CpaCyEcPointMultiplyOpData *pOpData,
-        CpaBoolean *pMultiplyStatus,
-        CpaFlatBuffer *pXk,
-        CpaFlatBuffer *pYk);
-
+                     const CpaCyEcPointMultiplyCbFunc pCb,
+                     void *pCallbackTag,
+                     const CpaCyEcPointMultiplyOpData *pOpData,
+                     CpaBoolean *pMultiplyStatus,
+                     CpaFlatBuffer *pXk,
+                     CpaFlatBuffer *pYk);
 
 /**
  *****************************************************************************
@@ -865,10 +814,10 @@ cpaCyEcPointMultiply(const CpaInstanceHandle instanceHandle,
  *****************************************************************************/
 CpaStatus CPA_DEPRECATED
 cpaCyEcPointVerify(const CpaInstanceHandle instanceHandle,
-        const CpaCyEcPointVerifyCbFunc pCb,
-        void *pCallbackTag,
-        const CpaCyEcPointVerifyOpData *pOpData,
-        CpaBoolean *pVerifyStatus);
+                   const CpaCyEcPointVerifyCbFunc pCb,
+                   void *pCallbackTag,
+                   const CpaCyEcPointVerifyOpData *pOpData,
+                   CpaBoolean *pVerifyStatus);
 
 /**
  *****************************************************************************
@@ -934,8 +883,7 @@ cpaCyEcPointVerify(const CpaInstanceHandle instanceHandle,
  *      CpaCyEcCurveType
  *      CpaCyEcCurveParameters
  *****************************************************************************/
-CpaStatus
-cpaCyEcGenericPointMultiply(
+CpaStatus cpaCyEcGenericPointMultiply(
     const CpaInstanceHandle instanceHandle,
     const CpaCyEcPointMultiplyCbFunc pCb,
     void *pCallbackTag,
@@ -1004,8 +952,7 @@ cpaCyEcGenericPointMultiply(
  *      CpaCyEcCurveType
  *      CpaCyEcCurveParameters
  *****************************************************************************/
-CpaStatus
-cpaCyEcGenericPointVerify (
+CpaStatus cpaCyEcGenericPointVerify(
     const CpaInstanceHandle instanceHandle,
     const CpaCyEcPointVerifyCbFunc pCb,
     void *pCallbackTag,
@@ -1078,14 +1025,14 @@ cpaCyEcGenericPointVerify (
  *      CpaCyEcMontEdwdsPointMultiplyCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyEcMontEdwdsPointMultiply(const CpaInstanceHandle instanceHandle,
-        const CpaCyEcPointMultiplyCbFunc pCb,
-        void *pCallbackTag,
-        const CpaCyEcMontEdwdsPointMultiplyOpData *pOpData,
-        CpaBoolean *pMultiplyStatus,
-        CpaFlatBuffer *pXk,
-        CpaFlatBuffer *pYk);
+CpaStatus cpaCyEcMontEdwdsPointMultiply(
+    const CpaInstanceHandle instanceHandle,
+    const CpaCyEcPointMultiplyCbFunc pCb,
+    void *pCallbackTag,
+    const CpaCyEcMontEdwdsPointMultiplyOpData *pOpData,
+    CpaBoolean *pMultiplyStatus,
+    CpaFlatBuffer *pXk,
+    CpaFlatBuffer *pYk);
 
 /**
  *****************************************************************************
@@ -1139,9 +1086,8 @@ cpaCyEcMontEdwdsPointMultiply(const CpaInstanceHandle instanceHandle,
  * @see
  *      CpaCyEcStats64
  *****************************************************************************/
-CpaStatus
-cpaCyEcQueryStats64(const CpaInstanceHandle instanceHandle,
-        CpaCyEcStats64 *pEcStats);
+CpaStatus cpaCyEcQueryStats64(const CpaInstanceHandle instanceHandle,
+                              CpaCyEcStats64 *pEcStats);
 
 #ifdef __cplusplus
 } /* close the extern "C" { */

@@ -4,37 +4,11 @@
  * @brief Osal interface to openssl crypto library.
  *
  * @par
- *   BSD LICENSE
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  */
 
 #include "Osal.h"
@@ -44,6 +18,9 @@
 /* Required for MIN macro */
 #include <sys/param.h>
 
+#ifndef OSAL_AES_SET_ENCRYPT
+#define OSAL_AES_SET_ENCRYPT AES_set_encrypt_key
+#endif
 #define BYTE_TO_BITS_SHIFT 3
 
 #define AES_128_KEY_LEN_BYTES 16
@@ -245,6 +222,39 @@ osalAESEncrypt(UINT8 *key, UINT32 keyLenInBytes, UINT8 *in, UINT8 *out)
     AES_encrypt(in, out, &enc_key);
     return OSAL_SUCCESS;
 }
+#define EXPANDED_KEY_KAT 0xcb5befb4
+static OSAL_STATUS osalAesSetEncryptByteSwap(INT32 *byte_swap)
+{
+    UINT32 key_len_bits = AES_128_KEY_LEN_BYTES << BYTE_TO_BITS_SHIFT;
+    UINT8 key[AES_128_KEY_LEN_BYTES] = { 0 };
+    static INT32 byte_swap_required = -1;
+    UINT32 lw_per_round = 4;
+    int status;
+    AES_KEY rev_key;
+    UINT32 key_val;
+
+    *byte_swap = byte_swap_required;
+
+    if (byte_swap_required >= 0)
+        return OSAL_SUCCESS;
+
+    status = OSAL_AES_SET_ENCRYPT(key, key_len_bits, &rev_key);
+    if (status < 0)
+        return OSAL_FAIL;
+
+    /* First 4 bytes of the last round of expanded key */
+    key_val = rev_key.rd_key[lw_per_round * rev_key.rounds];
+
+    if (EXPANDED_KEY_KAT == key_val)
+        byte_swap_required = 0;
+    else if (key_val == __builtin_bswap32(EXPANDED_KEY_KAT))
+        byte_swap_required = 1;
+    else
+        return OSAL_FAIL;
+
+    *byte_swap = byte_swap_required;
+    return OSAL_SUCCESS;
+}
 
 OSAL_STATUS
 osalAESKeyExpansionForward(UINT8 *key, UINT32 key_len_in_bytes, UINT32 *out)
@@ -255,6 +265,7 @@ osalAESKeyExpansionForward(UINT8 *key, UINT32 key_len_in_bytes, UINT32 *out)
     INT32 lw_left_to_copy = key_len_in_bytes / lw_per_round;
     UINT32 *key_pointer = NULL;
     INT32 status = 0;
+    INT32 swap;
 
     /* Error check for wrong input key len */
     if (AES_128_KEY_LEN_BYTES != key_len_in_bytes &&
@@ -267,6 +278,10 @@ osalAESKeyExpansionForward(UINT8 *key, UINT32 key_len_in_bytes, UINT32 *out)
                 "Incorrect key length\n");
         return OSAL_FAIL;
     }
+
+    status = osalAesSetEncryptByteSwap(&swap);
+    if (OSAL_SUCCESS != status)
+        return status;
 
     status = AES_set_encrypt_key(
         key, key_len_in_bytes << BYTE_TO_BITS_SHIFT, &rev_key);
@@ -281,7 +296,10 @@ osalAESKeyExpansionForward(UINT8 *key, UINT32 key_len_in_bytes, UINT32 *out)
     {
         for (i = 0; i < MIN(lw_left_to_copy, lw_per_round); i++, j++)
         {
-            out[j] = __builtin_bswap32(key_pointer[i]);
+            if (swap)
+                out[j] = __builtin_bswap32(key_pointer[i]);
+            else
+                out[j] = key_pointer[i];
         }
 
         lw_left_to_copy -= lw_per_round;

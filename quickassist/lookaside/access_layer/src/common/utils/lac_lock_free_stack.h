@@ -3,69 +3,18 @@
 
 /*******************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  * @lac_lock_free_stack.h
  *
  * This file provides a lock-free stack implementation.
- * There is an assumption that effective virtual address size is 48-bit only,
- * which is true for Linux user space applications in 32/64-bit modes.
+ * There is an assumption that effective virtual address size is 57-bit,
+ * which is true for Linux and FBSD user space apps in 32/64-bit modes.
+ * Stack is usable on 48-bit and 57-bit platforms.
  *
  ******************************************************************************/
 
@@ -77,35 +26,25 @@
 
 #include "lac_mem_pools.h"
 
+#ifdef __LP64__
+typedef unsigned int atomic_int __attribute__((mode(TI)));
+#else
+typedef unsigned int atomic_int __attribute__((mode(DI)));
+#endif
+
 typedef union {
     struct
     {
-        uint64_t ctr : 16;
-        uint64_t ptr : 48;
+        unsigned long ctr;
+        void *ptr;
     };
-    uint64_t atomic;
+    atomic_int atomic;
 } pointer_t;
 
 typedef struct
 {
     volatile pointer_t top;
 } lock_free_stack_t;
-
-#ifdef KERNEL_SPACE
-static inline void *PTR(const uintptr_t addr48)
-{
-#ifdef __x86_64__
-    const int64_t addr64 = addr48 << 16;
-
-    /* Do arithmetic shift to restore kernel canonical address (if not NULL) */
-    return (void *)(addr64 >> 16);
-#else
-    return (void *)(addr48);
-#endif
-}
-#else
-#define PTR(x) ((void *)(uintptr_t)(x))
-#endif
 
 static inline lac_mem_blk_t *pop(lock_free_stack_t *stack)
 {
@@ -116,11 +55,11 @@ static inline lac_mem_blk_t *pop(lock_free_stack_t *stack)
     do
     {
         old_top.atomic = stack->top.atomic;
-        next = PTR(old_top.ptr);
+        next = old_top.ptr;
         if (NULL == next)
             return next;
 
-        new_top.ptr = (uintptr_t)next->pNext;
+        new_top.ptr = next->pNext;
         new_top.ctr = old_top.ctr + 1;
     } while (!__sync_bool_compare_and_swap(
         &stack->top.atomic, old_top.atomic, new_top.atomic));
@@ -136,8 +75,8 @@ static inline void push(lock_free_stack_t *stack, lac_mem_blk_t *val)
     do
     {
         old_top.atomic = stack->top.atomic;
-        val->pNext = PTR(old_top.ptr);
-        new_top.ptr = (uintptr_t)val;
+        val->pNext = old_top.ptr;
+        new_top.ptr = val;
         new_top.ctr = old_top.ctr + 1;
     } while (!__sync_bool_compare_and_swap(
         &stack->top.atomic, old_top.atomic, new_top.atomic));
@@ -145,14 +84,14 @@ static inline void push(lock_free_stack_t *stack, lac_mem_blk_t *val)
 
 static inline lock_free_stack_t _init_stack(void)
 {
-    lock_free_stack_t stack = { { { 0 } } };
+    lock_free_stack_t stack = {.top.atomic = 0};
     return stack;
 }
 
 static inline lac_mem_blk_t *top(lock_free_stack_t *stack)
 {
     pointer_t old_top = stack->top;
-    lac_mem_blk_t *next = PTR(old_top.ptr);
+    lac_mem_blk_t *next = old_top.ptr;
     return next;
 }
 

@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -102,6 +50,15 @@ extern volatile CpaBoolean backoff_dynamic_g;
 extern Cpa32U backoff_static_timer_g;
 static inline void printThreadDetails(single_thread_test_data_t *testSetup)
     __attribute__((unused));
+CpaStatus setDcPollingInterval(Cpa64U pollingInterval);
+CpaStatus printDcPollingInterval(void);
+void dcDpPerformance(single_thread_test_data_t *testSetup);
+
+#define NUM_BUFS(setup)                                                        \
+    (setup->isUseSGL ? setup->numberOfSGLs[i] : setup->numberOfBuffers[i])
+#define ZERO_PAD_ALIGNMENT (4 * 1024)
+#define ZERO_PAD_MS_BYTE                                                       \
+    ((DC_API_VERSION_AT_LEAST(3, 2) && IS_ZEROPAD_TEST()) ? 0xFF : 0x00)
 
 /*****************************************************************************
  * @ingroup sampleCompressionDpPerf
@@ -138,10 +95,9 @@ EXPORT_SYMBOL(printDcPollingInterval);
  * @description
  *  Callback function after a call to the DC API
  ******************************************************************************/
-void dcDpCallbackFunction(CpaDcDpOpData *pOpData)
+static void dcDpCallbackFunction(CpaDcDpOpData *pOpData)
 {
     CpaDcRqResults *pResults = &(pOpData->results);
-
 
     perf_data_t *pPerfData = (perf_data_t *)pOpData->pCallbackTag;
 
@@ -221,6 +177,47 @@ void dcDpCallbackFunction(CpaDcDpOpData *pOpData)
     }
 }
 
+#if DC_API_VERSION_AT_LEAST(3, 2) && defined(__FreeBSD__)
+/**
+ *****************************************************************************
+ * @ingroup sampleCompressionDpPerf
+ *
+ * @description
+ *  Helper functions to translate partial-read buffer mask
+ *
+ ******************************************************************************/
+static CpaStatus dcDpGetPartialReadRequestSettings(
+    compression_test_params_t *setup,
+    Cpa32U *offset,
+    Cpa32U *length)
+{
+    Cpa32U mask = dcDpPartialReadBufferMask_g;
+    Cpa32U bufferSize, chunkSize, i;
+
+    if (!IS_PARTREAD_TEST())
+        return CPA_STATUS_INVALID_PARAM;
+
+    bufferSize = setup->bufferSize;
+    if (setup->isUseSGL)
+        bufferSize *= setup->numFlatsPerSGL;
+    chunkSize = bufferSize / dcDpNumFlatsPerSGL_g;
+
+    for (i = 0; i < dcDpNumFlatsPerSGL_g; i++)
+    {
+        if (mask == (1 << i))
+        {
+            *offset = i * chunkSize;
+            *length = chunkSize;
+            return CPA_STATUS_SUCCESS;
+        }
+    }
+    *offset = 0;
+    *length = 0;
+
+    return CPA_STATUS_INVALID_PARAM;
+}
+#endif /* #if DC_API_VERSION_AT_LEAST(3, 2) */
+
 /**
  *****************************************************************************
  * @ingroup sampleCompressionDpPerf
@@ -231,7 +228,8 @@ void dcDpCallbackFunction(CpaDcDpOpData *pOpData)
 static CpaStatus createBuffersDp(Cpa32U buffSize,
                                  Cpa32U numBuffs,
                                  CpaPhysFlatBuffer **pFlatBuffArray,
-                                 Cpa32U nodeId)
+                                 Cpa32U nodeId,
+                                 const Cpa8U msByte)
 {
     Cpa32U i = 0;
 
@@ -261,7 +259,7 @@ static CpaStatus createBuffersDp(Cpa32U buffSize,
         }
 
         memset((SAMPLE_CODE_UINT *)(uintptr_t)pFlatBuffArray[i]->bufferPhysAddr,
-               0,
+               msByte,
                buffSize);
     }
     return CPA_STATUS_SUCCESS;
@@ -283,7 +281,7 @@ static CpaStatus createOpDataDp(Cpa32U numBuffs,
     for (i = 0; i < numBuffs; i++)
     {
         pOpDataArray[i] =
-            qaeMemAllocNUMA((sizeof(CpaDcDpOpData)), nodeId, BYTE_ALIGNMENT_8);
+            qaeMemAllocNUMA(sizeof(CpaDcDpOpData), nodeId, BYTE_ALIGNMENT_8);
         if (NULL == pOpDataArray[i])
         {
             PRINT_ERR(" Unable to allocate op data\n");
@@ -295,6 +293,72 @@ static CpaStatus createOpDataDp(Cpa32U numBuffs,
         }
     }
     return CPA_STATUS_SUCCESS;
+}
+
+/**
+ *****************************************************************************
+ * @ingroup sampleCompressionDpPerf
+ *
+ * @description
+ *  Free memory for SGLs
+ ******************************************************************************/
+static void freeSGLArray(CpaPhysBufferList ***sglArray,
+                         Cpa32U numberOfFiles,
+                         compression_test_params_t *setup)
+{
+    Cpa32U i = 0, j = 0;
+
+    if (!sglArray)
+        return;
+
+    for (i = 0; i < numberOfFiles; i++)
+    {
+        if (!sglArray[i])
+            continue;
+        for (j = 0; j < setup->numberOfSGLs[i]; j++)
+        {
+            if (!sglArray[i][j])
+                continue;
+            qaeMemFreeNUMA((void **)&sglArray[i][j]);
+            sglArray[i][j] = NULL;
+        }
+        qaeMemFree((void **)&sglArray[i]);
+        sglArray[i] = NULL;
+    }
+    qaeMemFree((void **)&sglArray);
+}
+
+/**
+ *****************************************************************************
+ * @ingroup sampleCompressionDpPerf
+ *
+ * @description
+ *  Free memory for SGL Operational data
+ ******************************************************************************/
+static void freeSGLsOpData(CpaDcDpOpData ***sglsOpData,
+                           Cpa32U numberOfFiles,
+                           compression_test_params_t *setup)
+{
+    Cpa32U i = 0, j = 0;
+
+    if (!sglsOpData)
+        return;
+
+    for (i = 0; i < numberOfFiles; i++)
+    {
+        if (!sglsOpData[i])
+            continue;
+        for (j = 0; j < setup->numberOfSGLs[i]; j++)
+        {
+            if (!sglsOpData[i][j])
+                continue;
+            qaeMemFreeNUMA((void **)&sglsOpData[i][j]);
+            sglsOpData[i][j] = NULL;
+        }
+        qaeMemFree((void **)&sglsOpData[i]);
+        sglsOpData[i] = NULL;
+    }
+    qaeMemFree((void **)&sglsOpData);
 }
 
 /**
@@ -401,6 +465,17 @@ static void freeOpDataDp(CpaDcDpOpData ***compressionOpData,
     {
         for (j = 0; j < setup->numberOfBuffers[i]; j++)
         {
+#ifdef SC_WITH_GEN4
+            if (CPA_TRUE == setup->setNsRequest)
+            {
+                if ((NULL != compressionOpData[i][j]) &&
+                    (NULL != compressionOpData[i][j]->pSetupData))
+                {
+                    qaeMemFreeNUMA(
+                        (void **)&compressionOpData[i][j]->pSetupData);
+                }
+            }
+#endif
             if (NULL != compressionOpData[i][j])
             {
                 qaeMemFreeNUMA((void **)&compressionOpData[i][j]);
@@ -433,11 +508,19 @@ static CpaStatus compressCorpusPreDecomp(compression_test_params_t *setup,
 
     /* Status variable */
     CpaStatus status = CPA_STATUS_FAIL;
+    CpaInstanceInfo2 info2 = { 0 };
+
+    status = cpaDcInstanceGetInfo2(setup->dcInstanceHandle, &info2);
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("cpaDcInstanceGetInfo2 API failed. (status = %d)\n", status);
+        return status;
+    }
 
     for (i = 0; i < numFiles; i++)
     {
         /* call the compress api */
-        for (j = 0; j < setup->numberOfBuffers[i]; j++)
+        for (j = 0; j < NUM_BUFS(setup); j++)
         {
             do
             {
@@ -445,7 +528,10 @@ static CpaStatus compressCorpusPreDecomp(compression_test_params_t *setup,
                 if (CPA_STATUS_RETRY == status)
                 {
                     setup->performanceStats->retries++;
-                    icp_sal_DcPollDpInstance(setup->dcInstanceHandle, 0);
+                    if (info2.isPolled == CPA_TRUE)
+                    {
+                        icp_sal_DcPollDpInstance(setup->dcInstanceHandle, 0);
+                    }
                     AVOID_SOFTLOCKUP;
                 }
                 if (perfData->threadReturnStatus == CPA_STATUS_FAIL)
@@ -475,7 +561,10 @@ static CpaStatus compressCorpusPreDecomp(compression_test_params_t *setup,
             }
             if (++submittedOps == OPERATIONS_POLLING_INTERVAL)
             {
-                icp_sal_DcPollDpInstance(setup->dcInstanceHandle, 0);
+                if (info2.isPolled == CPA_TRUE)
+                {
+                    icp_sal_DcPollDpInstance(setup->dcInstanceHandle, 0);
+                }
             }
         } /* End of number of buffers Loop */
     }     /* End of number of Files Loop*/
@@ -512,18 +601,68 @@ static CpaStatus performDcDpBatchOp(compression_test_params_t *setup,
     perf_cycles_t startBusyLoop = 0, endBusyLoop = 0, totalBusyLoopCycles = 0;
     CpaStatus pollStatus = CPA_STATUS_SUCCESS;
     Cpa32U numFiles = getNumFilesInCorpus(setup->corpus);
+#if DC_API_VERSION_AT_LEAST(3, 2) && defined(__FreeBSD__)
+    CpaDcDpPartialReadData ***partReadData = NULL;
+#endif
+    CpaInstanceInfo2 *info2 = NULL;
+
+    info2 = qaeMemAlloc(sizeof(CpaInstanceInfo2));
+    if (info2 == NULL)
+    {
+        PRINT_ERR("Failed to allocate memory for info2\n");
+        return CPA_STATUS_FAIL;
+    }
+
+    /* Initialize the structure */
+    memset(info2, 0, sizeof(CpaInstanceInfo2));
+
+    status = cpaDcInstanceGetInfo2(setup->dcInstanceHandle, info2);
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("cpaDcInstanceGetInfo2 API failed. (status = %d)\n", status);
+        qaeMemFree((void **)&info2);
+        return status;
+    }
 
     /* Zero performance stats */
     memset(perfData, 0, sizeof(perf_data_t));
 
     for (i = 0; i < numFiles; i++)
     {
-        totalBuffers += setup->numberOfBuffers[i];
+        totalBuffers += NUM_BUFS(setup);
     }
     setup->performanceStats->numOperations =
         (Cpa64U)totalBuffers * (Cpa64U)setup->numLoops;
     compressLoops = setup->numLoops;
     perfData->numLoops = setup->numLoops;
+
+#if DC_API_VERSION_AT_LEAST(3, 2) && defined(__FreeBSD__)
+    if (IS_PARTREAD_TEST())
+    {
+        partReadData = (CpaDcDpPartialReadData ***)qaeMemAlloc(
+            numFiles * sizeof(CpaDcDpPartialReadData **));
+        memset(partReadData, 0, numFiles * sizeof(CpaDcDpPartialReadData **));
+        for (i = 0; i < numFiles; i++)
+        {
+            partReadData[i] = (CpaDcDpPartialReadData **)qaeMemAlloc(
+                NUM_BUFS(setup) * sizeof(CpaDcDpPartialReadData *));
+            memset(partReadData[i],
+                   0,
+                   NUM_BUFS(setup) * sizeof(CpaDcDpPartialReadData *));
+            for (j = 0; j < NUM_BUFS(setup); j++)
+            {
+                partReadData[i][j] = (CpaDcDpPartialReadData *)qaeMemAlloc(
+                    sizeof(CpaDcDpPartialReadData));
+                partReadData[i][j]->bufferOffset = 0;
+                dcDpGetPartialReadRequestSettings(
+                    setup,
+                    &partReadData[i][j]->dataOffset,
+                    &partReadData[i][j]->length);
+            }
+        }
+    }
+#endif /* #if DC_API_VERSION_AT_LEAST(3, 2) */
+
     /* this Barrier will waits until all the threads get to this point */
     sampleCodeBarrier();
     coo_init(perfData, perfData->numOperations);
@@ -536,29 +675,59 @@ static CpaStatus performDcDpBatchOp(compression_test_params_t *setup,
         for (i = 0; i < numFiles; i++)
         {
             /* call the compress api */
-            for (j = 0; j < setup->numberOfBuffers[i]; j = j + numOfOpsToBatch)
+            for (j = 0; j < NUM_BUFS(setup); j = j + numOfOpsToBatch)
             {
                 do
                 {
                     /* Is the next batch size greater than the amount of
                      * buffers that we have left
                      */
-                    if (j + numOfOpsToBatch > setup->numberOfBuffers[i])
+                    if (j + numOfOpsToBatch > NUM_BUFS(setup))
                     {
-                        remainingOps = setup->numberOfBuffers[i] - j;
+                        remainingOps = NUM_BUFS(setup) - j;
                     }
                     else
                     {
                         remainingOps = numOfOpsToBatch;
                     }
                     coo_req_start(perfData);
+#if DC_API_VERSION_AT_LEAST(3, 2) && defined(__FreeBSD__)
+                    if (IS_ZEROPAD_TEST() &&
+                        compressionOpData[i][j]->sessDirection ==
+                            CPA_DC_DIR_COMPRESS)
+                    {
+
+                        status = cpaDcDpEnqueueOpWithZeroPadBatch(
+                            remainingOps, &compressionOpData[i][j], CPA_TRUE);
+                    }
+                    else if (IS_PARTREAD_TEST() &&
+                             compressionOpData[i][j]->sessDirection ==
+                                 CPA_DC_DIR_DECOMPRESS)
+                    {
+                        status = cpaDcDpEnqueueOpWithPartReadBatch(
+                            remainingOps,
+                            &compressionOpData[i][j],
+                            &partReadData[i][j],
+                            CPA_TRUE);
+                    }
+                    else
+                    {
+                        status = cpaDcDpEnqueueOpBatch(
+                            remainingOps, &compressionOpData[i][j], CPA_TRUE);
+                    }
+#else
                     status = cpaDcDpEnqueueOpBatch(
                         remainingOps, &compressionOpData[i][j], CPA_TRUE);
+#endif
                     coo_req_stop(perfData, status);
                     if (CPA_STATUS_RETRY == status)
                     {
                         setup->performanceStats->retries++;
-                        icp_sal_DcPollDpInstance(setup->dcInstanceHandle, 0);
+                        if (info2->isPolled == CPA_TRUE)
+                        {
+                            icp_sal_DcPollDpInstance(setup->dcInstanceHandle,
+                                                     0);
+                        }
                         AVOID_SOFTLOCKUP;
                     }
                     if (perfData->threadReturnStatus == CPA_STATUS_FAIL)
@@ -597,7 +766,8 @@ static CpaStatus performDcDpBatchOp(compression_test_params_t *setup,
                     perfData->threadReturnStatus = CPA_STATUS_FAIL;
                     break;
                 }
-                if (++submittedOps == OPERATIONS_POLLING_INTERVAL)
+                if ((++submittedOps == OPERATIONS_POLLING_INTERVAL) &&
+                    (CPA_TRUE == info2->isPolled))
                 {
                     coo_poll_dp_dc(
                         perfData, setup->dcInstanceHandle, &pollStatus);
@@ -630,7 +800,26 @@ static CpaStatus performDcDpBatchOp(compression_test_params_t *setup,
     }
     coo_average(perfData);
     coo_deinit(perfData);
+    qaeMemFree((void **)&info2);
 
+#if DC_API_VERSION_AT_LEAST(3, 2) && defined(__FreeBSD__)
+    if (partReadData)
+    {
+        for (i = 0; i < numFiles; i++)
+        {
+            if (!partReadData[i])
+                continue;
+            for (j = 0; j < NUM_BUFS(setup); j++)
+            {
+                if (!partReadData[i][j])
+                    continue;
+                qaeMemFree((void **)&partReadData[i][j]);
+            }
+            qaeMemFree((void **)&partReadData[i]);
+        }
+        qaeMemFree((void **)&partReadData);
+    }
+#endif
     return status;
 }
 
@@ -680,19 +869,56 @@ static CpaStatus performDcDpEnqueueOp(compression_test_params_t *setup,
     const Cpa32U request_mem_sz = sizeof(perf_cycles_t) * MAX_LATENCY_COUNT;
 #endif
     Cpa32U numFiles = getNumFilesInCorpus(setup->corpus);
+#if DC_API_VERSION_AT_LEAST(3, 2) && defined(__FreeBSD__)
+    CpaDcDpPartialReadData partReadData = { 0 };
+#endif
+    CpaInstanceInfo2 *info2 = NULL;
+
+    info2 = qaeMemAlloc(sizeof(CpaInstanceInfo2));
+    if (info2 == NULL)
+    {
+        PRINT_ERR("Failed to allocate memory for info2\n");
+        return CPA_STATUS_FAIL;
+    }
+
+    /* Initialize the structure */
+    memset(info2, 0, sizeof(CpaInstanceInfo2));
+
+    status = cpaDcInstanceGetInfo2(setup->dcInstanceHandle, info2);
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("cpaDcInstanceGetInfo2 API failed. (status = %d)\n", status);
+        qaeMemFree((void **)&info2);
+        return status;
+    }
 
     /* Zero performance stats */
     memset(perfData, 0, sizeof(perf_data_t));
-
     for (i = 0; i < numFiles; i++)
     {
-        totalBuffers += setup->numberOfBuffers[i];
+        totalBuffers += NUM_BUFS(setup);
     }
     setup->performanceStats->numOperations =
         (Cpa64U)totalBuffers * (Cpa64U)setup->numLoops;
     compressLoops = setup->numLoops;
     perfData->numLoops = setup->numLoops;
     coo_init(perfData, perfData->numOperations);
+
+#if DC_API_VERSION_AT_LEAST(3, 2) && defined(__FreeBSD__)
+    if (IS_PARTREAD_TEST())
+    {
+        partReadData.bufferOffset = 0;
+        status = dcDpGetPartialReadRequestSettings(
+            setup, &partReadData.dataOffset, &partReadData.length);
+        if (CPA_STATUS_SUCCESS != status)
+        {
+            PRINT_ERR("Unable to translate partial read mask to corresponding "
+                      "offset and length\n");
+            qaeMemFree((void **)&info2);
+            return CPA_STATUS_INVALID_PARAM;
+        }
+    }
+#endif /* #if DC_API_VERSION_AT_LEAST(3, 2) */
 
 #ifdef LATENCY_CODE
     if (latency_enable)
@@ -710,6 +936,8 @@ static CpaStatus performDcDpEnqueueOp(compression_test_params_t *setup,
         {
             PRINT_ERR("Failed to allocate memory for submission and response "
                       "times\n");
+            qaeMemFree((void **)&request_respnse_time);
+            qaeMemFree((void **)&request_submit_start);
             return CPA_STATUS_FAIL;
         }
         memset(request_submit_start, 0, request_mem_sz);
@@ -750,14 +978,14 @@ static CpaStatus performDcDpEnqueueOp(compression_test_params_t *setup,
             /* Loop through all our buffers and call EnqueueOp, until we have
              * enqueued numRequests, and when we do, call performOpNow to clear
              * the ring and actually execute the operations */
-            for (j = 0; j < setup->numberOfBuffers[i]; j++)
+            for (j = 0; j < NUM_BUFS(setup); j++)
             {
                 /* if we have reached the enqueue limit or we are about to
                  * submit the last buffer of the current corpus file then
                  * enqueue and perform the enqueued operations now.
                  */
                 if (++numOps % setup->numRequests == 0 ||
-                    j + 1 == setup->numberOfBuffers[i])
+                    j + 1 == NUM_BUFS(setup))
                 {
                     performOpNowFlag = CPA_TRUE;
                 }
@@ -798,15 +1026,41 @@ static CpaStatus performDcDpEnqueueOp(compression_test_params_t *setup,
                     }
 #endif
                     coo_req_start(perfData);
-
+#if DC_API_VERSION_AT_LEAST(3, 2) && defined(__FreeBSD__)
+                    if (IS_ZEROPAD_TEST() &&
+                        compressionOpData[i][j]->sessDirection ==
+                            CPA_DC_DIR_COMPRESS)
+                    {
+                        status = cpaDcDpEnqueueOpWithZeroPad(
+                            compressionOpData[i][j], performOpNowFlag);
+                    }
+                    else if (IS_PARTREAD_TEST() &&
+                             compressionOpData[i][j]->sessDirection ==
+                                 CPA_DC_DIR_DECOMPRESS)
+                    {
+                        status = cpaDcDpEnqueueOpWithPartRead(
+                            compressionOpData[i][j],
+                            &partReadData,
+                            performOpNowFlag);
+                    }
+                    else
+                    {
+                        status = cpaDcDpEnqueueOp(compressionOpData[i][j],
+                                                  performOpNowFlag);
+                    }
+#else
                     status = cpaDcDpEnqueueOp(compressionOpData[i][j],
                                               performOpNowFlag);
+#endif
                     coo_req_stop(perfData, status);
                     if (CPA_STATUS_RETRY == status)
                     {
                         setup->performanceStats->retries++;
-                        coo_poll_dp_dc(
-                            perfData, setup->dcInstanceHandle, &pollStatus);
+                        if (CPA_TRUE == info2->isPolled)
+                        {
+                            coo_poll_dp_dc(
+                               perfData, setup->dcInstanceHandle, &pollStatus);
+                        }
                         nextPoll = numOps2 + dcPollingInterval_g;
                         AVOID_SOFTLOCKUP;
                     }
@@ -906,8 +1160,11 @@ static CpaStatus performDcDpEnqueueOp(compression_test_params_t *setup,
                              * completes
                              * and dcPerformCallback() increments
                              * perfData->responses */
-                            icp_sal_DcPollDpInstance(setup->dcInstanceHandle,
-                                                     0);
+                            if (info2->isPolled == CPA_TRUE)
+                            {
+                                icp_sal_DcPollDpInstance(
+                                    setup->dcInstanceHandle, 0);
+                            }
                         }
                     }
                 }
@@ -929,8 +1186,11 @@ static CpaStatus performDcDpEnqueueOp(compression_test_params_t *setup,
                 if ((numOps2 == nextPoll) ||
                     (numOps % OPERATIONS_POLLING_INTERVAL == 0))
                 {
-                    coo_poll_dp_dc(
-                        perfData, setup->dcInstanceHandle, &pollStatus);
+                    if (CPA_TRUE == info2->isPolled)
+                    {
+                        coo_poll_dp_dc(
+                           perfData, setup->dcInstanceHandle, &pollStatus);
+                    }
                     if (CPA_STATUS_FAIL == pollStatus)
 
                     {
@@ -949,11 +1209,21 @@ static CpaStatus performDcDpEnqueueOp(compression_test_params_t *setup,
                     break;
                 }
             } /* End of number of buffers Loop */
-            if (CPA_STATUS_SUCCESS != status)
+            if (CPA_STATUS_UNSUPPORTED == status)
+	    {
+		    PRINT("Data Compression unsupported %d\n\n", status);
+		    perfData->threadReturnStatus = CPA_STATUS_UNSUPPORTED;
+		    numCreatedThreads_g --;
+		    status = CPA_STATUS_UNSUPPORTED;
+		    break;
+	    }
+	    else if (CPA_STATUS_SUCCESS != status)
             {
                 PRINT_ERR("Data Compression Failed %d\n\n", status);
                 perfData->threadReturnStatus = CPA_STATUS_FAIL;
-                break;
+		status = CPA_STATUS_FAIL;
+               qaeMemFree((void **)&info2);
+		return status;
             }
         } /* End of number of Files Loop*/
         if (CPA_STATUS_SUCCESS != status)
@@ -1058,6 +1328,7 @@ static CpaStatus performDcDpEnqueueOp(compression_test_params_t *setup,
 #endif
     coo_average(perfData);
     coo_deinit(perfData);
+    qaeMemFree((void **)&info2);
 
     return status;
 }
@@ -1150,7 +1421,6 @@ static CpaStatus performOffloadCalculation(compression_test_params_t *setup,
                                    packetSize,
                                    pPerfData->endCyclesTimestamp -
                                        pPerfData->startCyclesTimestamp);
-    currentThroughput = baseThroughput;
 
     /* Find the lower bound(retries) and upper bound(no retries) for subsequent
      * binary search.
@@ -1164,10 +1434,6 @@ static CpaStatus performOffloadCalculation(compression_test_params_t *setup,
         /* PERFORM OP */
         status =
             PerformOp(setup, compressionOpData, decompressionOpData, perfData);
-        currentThroughput = getThroughput(pPerfData->responses,
-                                          packetSize,
-                                          pPerfData->endCyclesTimestamp -
-                                              pPerfData->startCyclesTimestamp);
     }
 
     upperBound = pPerfData->busyLoopValue;
@@ -1201,9 +1467,653 @@ static CpaStatus performOffloadCalculation(compression_test_params_t *setup,
         /* Else retries are zero, but throughput has been affected. */
         else
         {
-            upperBound = pPerfData->busyLoopValue - 1;
+            upperBound = (pPerfData->busyLoopValue > 0) ?
+                         (pPerfData->busyLoopValue - 1) : 0;
         }
     } while (CPA_STATUS_SUCCESS == status && pPerfData->retries != 0);
+
+    return status;
+}
+
+/**
+ *****************************************************************************
+ * @ingroup sampleCompressionDpPerf
+ *
+ * @description
+ * Helper function which builds performance setup for SGL scenario. Existing
+ * flat buffer lists are divided to groups using global configurable variable
+ * dcDpNumFlatsPerSGL_g. For each SGL proper OpData for compression,
+ * decompression and comparison are created.
+ *
+ ******************************************************************************/
+static CpaStatus buildSGLsSetupFromFlats(
+    compression_test_params_t *setup,
+    CpaDcSessionHandle *pSessionHandle,
+    Cpa32U nodeId,
+    Cpa32U numFiles,
+    perf_data_t *perfData,
+    CpaPhysFlatBuffer ***srcFlatBuffArray,
+    CpaPhysFlatBuffer ***dstFlatBuffArray,
+    CpaPhysFlatBuffer ***cmpFlatBuffArray,
+    /* In-outs */
+    CpaDcDpOpData ****compSGLOpDataTblOut,
+    CpaDcDpOpData ****decompSGLOpDataTblOut,
+    /* In-outs - just for cleanup */
+    CpaPhysBufferList ****compSGLArrayOut,
+    CpaPhysBufferList ****decompSGLArrayOut)
+{
+    CpaStatus status = CPA_STATUS_SUCCESS;
+    Cpa32U fileCtr;
+    CpaDcDpOpData ***compOpDataArray = NULL;
+    CpaDcDpOpData ***decompOpDataTbl = NULL;
+    CpaPhysBufferList ***compSGLArray = NULL;
+    CpaPhysBufferList ***decompSGLArray = NULL;
+    Cpa32U totalSGLs = 0;
+
+    /* Operational data table for each file */
+    compOpDataArray =
+        (CpaDcDpOpData ***)qaeMemAlloc(numFiles * sizeof(CpaDcDpOpData **));
+    memset(compOpDataArray, 0x00, numFiles * sizeof(CpaDcDpOpData **));
+
+    /* Store SGLs for i.a. cleanup purpose */
+    compSGLArray = (CpaPhysBufferList ***)qaeMemAlloc(
+        numFiles * sizeof(CpaPhysBufferList **));
+    memset(compSGLArray, 0x00, numFiles * sizeof(CpaDcDpOpData **));
+    decompSGLArray = (CpaPhysBufferList ***)qaeMemAlloc(
+        numFiles * sizeof(CpaPhysBufferList **));
+    memset(decompSGLArray, 0x00, numFiles * sizeof(CpaDcDpOpData **));
+
+    /* Set required SGLs number - such like numberOfBuffers */
+    setup->numberOfSGLs = (Cpa32U *)qaeMemAlloc(numFiles * sizeof(Cpa32U));
+
+    for (fileCtr = 0; fileCtr < numFiles; fileCtr++)
+    {
+        CpaDcDpOpData **opDataSubArray = NULL;
+        Cpa32U sglsCtr, sglsNum;
+        Cpa32U flatsCtr, flatsNum;
+
+        /* Number of flats per file */
+        flatsNum = setup->numberOfBuffers[fileCtr];
+
+        /* Round down - to use only fully populated SGLs */
+        sglsNum = flatsNum / setup->numFlatsPerSGL;
+        setup->numberOfSGLs[fileCtr] = sglsNum;
+
+        /* Create OP data for particular SGL*/
+        opDataSubArray =
+            (CpaDcDpOpData **)qaeMemAlloc(sglsNum * sizeof(CpaDcDpOpData *));
+        memset(opDataSubArray, 0x00, sglsNum * sizeof(CpaDcDpOpData *));
+        compOpDataArray[fileCtr] = opDataSubArray;
+
+        /* Create subset of SGL for SGLs table */
+        compSGLArray[fileCtr] =
+            qaeMemAlloc(sglsNum * sizeof(CpaPhysBufferList *));
+        decompSGLArray[fileCtr] =
+            qaeMemAlloc(sglsNum * sizeof(CpaPhysBufferList *));
+
+        for (sglsCtr = 0, flatsCtr = 0; sglsCtr < sglsNum;
+             sglsCtr++, totalSGLs++)
+        {
+            CpaPhysBufferList *srcSGL = NULL;
+            CpaPhysBufferList *dstSGL = NULL;
+            Cpa32U bytesToCompress = 0;
+            Cpa32U bytesInDstBuffer = 0;
+            CpaDcDpOpData *pOpData = NULL;
+            Cpa32U i;
+
+            /* Create opData for each request */
+            pOpData = (CpaDcDpOpData *)qaeMemAllocNUMA(
+                sizeof(CpaDcDpOpData), nodeId, BYTE_ALIGNMENT_64);
+            memset(pOpData, 0x00, sizeof(CpaDcDpOpData));
+
+            /* Store newly created OP data in op data table */
+            opDataSubArray[sglsCtr] = pOpData;
+
+            /* Create source and destination SGL */
+            srcSGL = qaeMemAllocNUMA(
+                (sizeof(CpaPhysBufferList) +
+                 (setup->numFlatsPerSGL * sizeof(CpaPhysFlatBuffer))),
+                nodeId,
+                BYTE_ALIGNMENT_64);
+            srcSGL->numBuffers = setup->numFlatsPerSGL;
+            dstSGL = qaeMemAllocNUMA(
+                (sizeof(CpaPhysBufferList) +
+                 (setup->numFlatsPerSGL * sizeof(CpaPhysFlatBuffer))),
+                nodeId,
+                BYTE_ALIGNMENT_64);
+            dstSGL->numBuffers = setup->numFlatsPerSGL;
+            /* Store SGL in table for i.a. cleanup purpose */
+            compSGLArray[fileCtr][sglsCtr] = srcSGL;
+            decompSGLArray[fileCtr][sglsCtr] = dstSGL;
+
+            /* Fill up SGL using already set flat buffers */
+            for (i = 0; i < setup->numFlatsPerSGL && flatsCtr < flatsNum;
+                 flatsCtr++, i++)
+            {
+                /* Source SGL */
+                srcSGL->flatBuffers[i].bufferPhysAddr =
+                    (CpaPhysicalAddr)virtAddrToDevAddr(
+                        (void *)(uintptr_t)srcFlatBuffArray[fileCtr][flatsCtr]
+                            ->bufferPhysAddr,
+                        setup->dcInstanceHandle,
+                        CPA_ACC_SVC_TYPE_DATA_COMPRESSION);
+                srcSGL->flatBuffers[i].dataLenInBytes =
+                    srcFlatBuffArray[fileCtr][flatsCtr]->dataLenInBytes;
+                bytesToCompress += srcSGL->flatBuffers[i].dataLenInBytes;
+
+                /* Destination SGL */
+                dstSGL->flatBuffers[i].bufferPhysAddr =
+                    (CpaPhysicalAddr)virtAddrToDevAddr(
+                        (void *)(uintptr_t)dstFlatBuffArray[fileCtr][flatsCtr]
+                            ->bufferPhysAddr,
+                        setup->dcInstanceHandle,
+                        CPA_ACC_SVC_TYPE_DATA_COMPRESSION);
+                dstSGL->flatBuffers[i].dataLenInBytes =
+                    dstFlatBuffArray[fileCtr][flatsCtr]->dataLenInBytes;
+                bytesInDstBuffer += dstSGL->flatBuffers[i].dataLenInBytes;
+            } /* DC_COMP_FLATS_PER_SGL */
+
+            pOpData->srcBuffer = (CpaPhysicalAddr)virtAddrToDevAddr(
+                srcSGL,
+                setup->dcInstanceHandle,
+                CPA_ACC_SVC_TYPE_DATA_COMPRESSION);
+            pOpData->destBuffer = (CpaPhysicalAddr)virtAddrToDevAddr(
+                dstSGL,
+                setup->dcInstanceHandle,
+                CPA_ACC_SVC_TYPE_DATA_COMPRESSION);
+            /* Buffer lengths */
+            pOpData->bufferLenToCompress = bytesToCompress;
+            pOpData->bufferLenForData = bytesInDstBuffer;
+            pOpData->srcBufferLen = CPA_DP_BUFLIST;
+            pOpData->destBufferLen = CPA_DP_BUFLIST;
+
+            /* This physical */
+            pOpData->thisPhys =
+                (CpaPhysicalAddr)(SAMPLE_CODE_UINT)virtAddrToDevAddr(
+                    pOpData,
+                    setup->dcInstanceHandle,
+                    CPA_ACC_SVC_TYPE_DATA_COMPRESSION);
+
+            /* CnVnR settings, make it in-line with "FLAT" code */
+            pOpData->compressAndVerify = CPA_TRUE;
+            pOpData->compressAndVerifyAndRecover = CPA_TRUE;
+
+            /* Basic settings */
+            pOpData->dcInstance = setup->dcInstanceHandle;
+            pOpData->pSessionHandle = pSessionHandle;
+            pOpData->pCallbackTag = perfData;
+            pOpData->sessDirection = CPA_DC_DIR_COMPRESS;
+
+        } /* SGL per file enumeration */
+    }     /* Files enumeration */
+    *compSGLArrayOut = compSGLArray;
+    *decompSGLArrayOut = decompSGLArray;
+    *compSGLOpDataTblOut = compOpDataArray;
+
+    /* ready to go */
+    if (CPA_DC_DIR_COMPRESS == setup->dcSessDir)
+    {
+        perfData->numOperations =
+            (Cpa64U)totalSGLs * setup->numFlatsPerSGL * (Cpa64U)setup->numLoops;
+        perfData->responses = 0;
+        goto exit;
+    }
+
+    /*
+     * De-compression case
+     */
+
+    /* Compress whole set of OpData to swap to buffers */
+    perfData->numOperations = totalSGLs;
+    status = compressCorpusPreDecomp(setup, compOpDataArray, perfData);
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("Could not compress corpus before Decompression = %d \n",
+                  status);
+        status = CPA_STATUS_FAIL;
+        goto cleanup;
+    }
+
+    /* Create decompression OpData table for each file */
+    decompOpDataTbl =
+        (CpaDcDpOpData ***)qaeMemAlloc(numFiles * sizeof(CpaDcDpOpData **));
+    memset(decompOpDataTbl, 0x00, numFiles * sizeof(CpaDcDpOpData **));
+
+    /* Create test comparison OpData table for each file */
+    for (fileCtr = 0; fileCtr < numFiles; fileCtr++)
+    {
+        CpaDcDpOpData **opDataSubArray = NULL;
+        Cpa32U sglsCtr, sglsNum;
+
+        sglsNum = setup->numberOfSGLs[fileCtr];
+        opDataSubArray =
+            (CpaDcDpOpData **)qaeMemAlloc(sglsNum * sizeof(CpaDcDpOpData *));
+        memset(opDataSubArray, 0x00, sglsNum * sizeof(CpaDcDpOpData *));
+        decompOpDataTbl[fileCtr] = opDataSubArray;
+
+        for (sglsCtr = 0; sglsCtr < setup->numberOfSGLs[fileCtr]; sglsCtr++)
+        {
+            CpaDcDpOpData *pCompOpData = NULL;
+            CpaDcDpOpData *pOpData = NULL;
+            CpaPhysBufferList *compSGL = NULL;
+            Cpa32U i;
+
+            pCompOpData = compOpDataArray[fileCtr][sglsCtr];
+            /* Create opData for each request */
+            pOpData = (CpaDcDpOpData *)qaeMemAllocNUMA(
+                sizeof(CpaDcDpOpData), nodeId, BYTE_ALIGNMENT_64);
+            memset(pOpData, 0x00, sizeof(CpaDcDpOpData));
+            opDataSubArray[sglsCtr] = pOpData;
+
+            /* Set cmpBuffers in destination SGL */
+            compSGL = compSGLArray[fileCtr][sglsCtr];
+            for (i = 0; i < setup->numFlatsPerSGL; i++)
+            {
+                CpaPhysFlatBuffer *cmpFlat =
+                    cmpFlatBuffArray[fileCtr]
+                                    [sglsCtr * setup->numFlatsPerSGL + i];
+                compSGL->flatBuffers[i].bufferPhysAddr =
+                    (CpaPhysicalAddr)virtAddrToDevAddr(
+                        (void *)(uintptr_t)cmpFlat->bufferPhysAddr,
+                        setup->dcInstanceHandle,
+                        CPA_ACC_SVC_TYPE_DATA_COMPRESSION);
+            }
+
+            /* Flip buffers */
+            pOpData->destBuffer = pCompOpData->srcBuffer;
+            pOpData->destBufferLen = pCompOpData->srcBufferLen;
+            /* Place physical pointer to destination SGL */
+            pOpData->srcBuffer = pCompOpData->destBuffer;
+            pOpData->srcBufferLen = pCompOpData->destBufferLen;
+
+            pOpData->bufferLenToCompress = pCompOpData->results.produced;
+            pOpData->bufferLenForData = pCompOpData->results.consumed;
+            pOpData->sessDirection = CPA_DC_DIR_COMPRESS;
+
+            /* This physical */
+            pOpData->thisPhys =
+                (CpaPhysicalAddr)(SAMPLE_CODE_UINT)virtAddrToDevAddr(
+                    pOpData,
+                    setup->dcInstanceHandle,
+                    CPA_ACC_SVC_TYPE_DATA_COMPRESSION);
+
+            /* CnVnR settings, make it in-line with "FLAT" code */
+            pOpData->compressAndVerify = CPA_TRUE;
+            pOpData->compressAndVerifyAndRecover = CPA_TRUE;
+
+            /* Basic settings */
+            pOpData->dcInstance = setup->dcInstanceHandle;
+            pOpData->pSessionHandle = pSessionHandle;
+            pOpData->pCallbackTag = perfData;
+            pOpData->sessDirection = CPA_DC_DIR_DECOMPRESS;
+        }
+    }
+    perfData->numOperations =
+        (Cpa64U)totalSGLs * setup->numFlatsPerSGL * (Cpa64U)setup->numLoops;
+    perfData->responses = 0;
+    *decompSGLOpDataTblOut = decompOpDataTbl;
+
+exit:
+    return status;
+
+cleanup:
+    freeSGLsOpData(compOpDataArray, numFiles, setup);
+    freeSGLsOpData(decompOpDataTbl, numFiles, setup);
+    freeSGLArray(compSGLArray, numFiles, setup);
+    freeSGLArray(decompSGLArray, numFiles, setup);
+
+    return status;
+}
+#if DC_API_VERSION_AT_LEAST(3, 2) && defined(__FreeBSD__)
+#endif /* #if DC_API_VERSION_AT_LEAST(3, 2) */
+
+/**
+ *****************************************************************************
+ * @ingroup sampleCompressionDpPerf
+ *
+ * @description
+ *  Main executing function which allocates/frees memory which is required,
+ *  and performs Enqueue/Batch operations as required
+ ******************************************************************************/
+static CpaStatus dcDpPerformSGL(compression_test_params_t *setup)
+{
+    /* Looping control variables */
+    Cpa32U i = 0, j = 0;
+    /* Status variable */
+    CpaStatus status = CPA_STATUS_SUCCESS;
+    /* NUMA node ID */
+    Cpa32U nodeId = 0;
+    /* File data pointer */
+    Cpa8U *fileDataPtr = NULL;
+    /* Performance data Structure */
+    perf_data_t *perfData = NULL;
+    /* Buffer size */
+    Cpa32U bufferSize = 0;
+    /* Dest Buffer size */
+    Cpa32U destBufferSize = 0;
+    /* Session size */
+    Cpa32U sessionSize = 0;
+    /* Session handle */
+    CpaDcSessionHandle *pSessionHandle = NULL;
+    CpaBoolean sessionInitialized = CPA_FALSE;
+    /* Buffer counters */
+    Cpa32U amountOfFullBuffers = 0;
+    /* SGL opData */
+    CpaDcDpOpData ***compressionOpDataSGL = NULL;
+    CpaDcDpOpData ***decompressionOpDataSGL = NULL;
+    /* Declare src, dst & comp buffers */
+    CpaPhysFlatBuffer ***srcFlatBuffArray = NULL;
+    CpaPhysFlatBuffer ***dstFlatBuffArray = NULL;
+    CpaPhysFlatBuffer ***cmpFlatBuffArray = NULL;
+    /* Declare src, dst SGLs */
+    CpaPhysBufferList ***compSGLArray = NULL;
+    CpaPhysBufferList ***decompSGLArray = NULL;
+    Cpa32U numFiles = 0;
+    const corpus_file_t *fileArray = NULL;
+
+    if (NULL == setup)
+    {
+        PRINT_ERR("Test Setup Pointer is NULL\n");
+        return CPA_STATUS_FAIL;
+    }
+
+    numFiles = getNumFilesInCorpus(setup->corpus);
+    fileArray = getFilesInCorpus(setup->corpus);
+
+    perfData = setup->performanceStats;
+    bufferSize = setup->bufferSize;
+
+    /* Check what NUMA node we are on in order to allocate memory */
+    status = sampleCodeDcGetNode(setup->dcInstanceHandle, &nodeId);
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("Unable to get Node ID\n");
+        goto exit;
+    }
+
+    srcFlatBuffArray = qaeMemAllocNUMA(
+        (numFiles * sizeof(CpaPhysFlatBuffer **)), nodeId, BYTE_ALIGNMENT_64);
+    /* Check for NULL */
+    if (NULL == srcFlatBuffArray)
+    {
+        status = CPA_STATUS_FAIL;
+        goto exit;
+    }
+
+    dstFlatBuffArray = qaeMemAllocNUMA(
+        (numFiles * sizeof(CpaPhysFlatBuffer **)), nodeId, BYTE_ALIGNMENT_64);
+    /* Check for NULL */
+    if (NULL == dstFlatBuffArray)
+    {
+        PRINT_ERR("unable to allocate dstFlatBuffArray \n");
+        status = CPA_STATUS_FAIL;
+        goto exit;
+    }
+
+    cmpFlatBuffArray = qaeMemAllocNUMA(
+        (numFiles * sizeof(CpaPhysFlatBuffer **)), nodeId, BYTE_ALIGNMENT_64);
+    /* Check for NULL */
+    if (NULL == cmpFlatBuffArray)
+    {
+        PRINT_ERR("unable to allocate cmpFlatBuffArray \n");
+        status = CPA_STATUS_FAIL;
+        goto exit;
+    }
+
+    /* populate the flat buffer array with number of buffers required
+     * for each file and allocate the memory
+     */
+    for (i = 0; i < numFiles; i++)
+    {
+        /* allocate the memory for src, destination and compare buffers
+         * for each file
+         */
+        srcFlatBuffArray[i] = qaeMemAllocNUMA(
+            (setup->numberOfBuffers[i] * (sizeof(CpaPhysFlatBuffer *))),
+            nodeId,
+            BYTE_ALIGNMENT_64);
+        /* Check for NULL */
+        if (NULL == srcFlatBuffArray[i])
+        {
+            PRINT_ERR("Unable to allocate Memory for srcFlatBuffArray\n ");
+            status = CPA_STATUS_FAIL;
+            goto exit;
+        }
+
+        dstFlatBuffArray[i] = qaeMemAllocNUMA(
+            (setup->numberOfBuffers[i] * (sizeof(CpaPhysFlatBuffer *))),
+            nodeId,
+            BYTE_ALIGNMENT_64);
+        /* Check for NULL */
+        if (NULL == dstFlatBuffArray[i])
+        {
+            PRINT_ERR("Unable to allocate Memory for dstFlatBuffArray\n ");
+            status = CPA_STATUS_FAIL;
+            goto exit;
+        }
+
+        cmpFlatBuffArray[i] = qaeMemAllocNUMA(
+            (setup->numberOfBuffers[i] * (sizeof(CpaPhysFlatBuffer *))),
+            nodeId,
+            BYTE_ALIGNMENT_64);
+        /* Check for NULL */
+        if (NULL == cmpFlatBuffArray[i])
+        {
+            PRINT_ERR("Unable to allocate Memory for cmpFlatBuffArray\n ");
+            status = CPA_STATUS_FAIL;
+            goto exit;
+        }
+    }
+
+    /* For compression,the destination buffer size is obtained using
+     * Compress Bound API.
+     * NOTE: For SGL we need to estimate destination buffer for bunch of
+     *       buffers composed in single SGL.
+     */
+    status = qatGetCompressBoundDestinationBufferSize(
+        setup, bufferSize * setup->numFlatsPerSGL, &destBufferSize);
+
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("Unable to get the destination buffer size using Compress "
+                  "Bound API\n");
+        goto exit;
+    }
+
+    /* Allocate flat buffers for each file */
+    for (i = 0; i < numFiles; i++)
+    {
+        status = createBuffersDp(bufferSize,
+                                 setup->numberOfBuffers[i],
+                                 srcFlatBuffArray[i],
+                                 nodeId,
+                                 0);
+
+        if (CPA_STATUS_SUCCESS != status)
+        {
+            PRINT_ERR("Unable to create flat buffers for srcFlatBuffArray\n");
+            goto exit;
+        }
+
+        status = createBuffersDp(destBufferSize,
+                                 setup->numberOfBuffers[i],
+                                 dstFlatBuffArray[i],
+                                 nodeId,
+                                 ZERO_PAD_MS_BYTE);
+        if (CPA_STATUS_SUCCESS != status)
+        {
+            PRINT_ERR("Unable to create buffers for dstFlatBuffArray\n");
+            goto exit;
+        }
+
+        if (setup->disableAdditionalCmpbufferSize == CPA_FALSE)
+        {
+
+            /* For reliability mode we need to allocate double the space to
+             * extract the SW compressed data into*/
+            status = createBuffersDp((bufferSize * EXTRA_BUFFER),
+                                     setup->numberOfBuffers[i],
+                                     cmpFlatBuffArray[i],
+                                     nodeId,
+                                     0);
+        }
+        else
+        {
+            /* For performance use cases additional buffer size  is not required
+             * to be added to the cmp buffer, as there is no SW checks*/
+            status = createBuffersDp(bufferSize,
+                                     setup->numberOfBuffers[i],
+                                     cmpFlatBuffArray[i],
+                                     nodeId,
+                                     0);
+        }
+
+        if (CPA_STATUS_SUCCESS != status)
+        {
+            PRINT_ERR("Unable to create buffers for cmpFlatBuffArray\n");
+            goto exit;
+        }
+    }
+
+    /* Copy data into Flat Buffers from the corpus structure */
+    for (i = 0; i < numFiles; i++)
+    {
+        fileDataPtr = fileArray[i].corpusBinaryData;
+        /* get the number of full Buffers */
+        amountOfFullBuffers = (fileArray[i].corpusBinaryDataLen) / bufferSize;
+        /* Copy the data into Flat buffers */
+        for (j = 0; j < amountOfFullBuffers; j++)
+        {
+            memcpy(((void *)(uintptr_t)srcFlatBuffArray[i][j]->bufferPhysAddr),
+                   fileDataPtr,
+                   bufferSize);
+            fileDataPtr += bufferSize;
+        }
+    }
+
+    setup->setupData.sessDirection = CPA_DC_DIR_COMBINED;
+
+    /* Get Size for DC Session */
+    status = cpaDcDpGetSessionSize(
+        setup->dcInstanceHandle, &(setup->setupData), &sessionSize);
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("cpaDcGetSessionSize() returned %d status.\n", status);
+        goto exit;
+    }
+
+    /* Allocate Memory for DC Session */
+    pSessionHandle = (CpaDcSessionHandle)qaeMemAllocNUMA(
+        (sessionSize), nodeId, BYTE_ALIGNMENT_64);
+    if (NULL == pSessionHandle)
+    {
+        PRINT_ERR("Unable to allocate Memory for Session Handle\n");
+        goto exit;
+    }
+    /* Setup and init Session */
+    status = cpaDcDpInitSession(
+        setup->dcInstanceHandle, pSessionHandle, &(setup->setupData));
+#ifdef LATENCY_CODE
+    if ((latency_enable) && (latency_debug))
+    {
+        PRINT(
+            "%s: cpaDcDpInitSession() returns=%d\n", __FUNCTION__, (int)status);
+    }
+#endif
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("Problem in session creation: status = %d \n", status);
+        goto exit;
+    }
+    sessionInitialized = CPA_TRUE;
+
+    /* CnV Error Injection */
+    /* Register a callback function */
+    status = cpaDcDpRegCbFunc(setup->dcInstanceHandle,
+                              (CpaDcDpCallbackFn)dcDpCallbackFunction);
+#ifdef LATENCY_CODE
+    if ((latency_enable) && (latency_debug))
+    {
+        PRINT("%s: cpaDcDpRegCbFunc() returns=%d\n", __FUNCTION__, (int)status);
+    }
+#endif
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("Unable to register callback fn, status = %d \n", status);
+        status = CPA_STATUS_FAIL;
+        goto exit;
+    }
+
+    status = buildSGLsSetupFromFlats(setup,
+                                     pSessionHandle,
+                                     nodeId,
+                                     numFiles,
+                                     perfData,
+                                     srcFlatBuffArray,
+                                     dstFlatBuffArray,
+                                     cmpFlatBuffArray,
+                                     &compressionOpDataSGL,
+                                     &decompressionOpDataSGL,
+                                     &compSGLArray,
+                                     &decompSGLArray);
+
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        goto exit;
+    }
+
+    status = PerformOp(
+        setup, compressionOpDataSGL, decompressionOpDataSGL, perfData);
+#ifdef LATENCY_CODE
+    if ((latency_enable) && (latency_debug))
+    {
+        PRINT("%s: PerformOp() returns=%d\n", __FUNCTION__, (int)status);
+    }
+#endif
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        status = CPA_STATUS_FAIL;
+        goto exit;
+    }
+
+    if (CPA_CC_BUSY_LOOPS == iaCycleCount_g)
+    {
+        status = performOffloadCalculation(
+            setup, compressionOpDataSGL, decompressionOpDataSGL, perfData);
+    }
+
+#if DC_API_VERSION_AT_LEAST(3, 2) && defined(__FreeBSD__)
+#endif
+
+    /* Record the bytes consumed and produced from the compressionOpData
+     * structures for later printing.
+     */
+    dcDpSetBytesProducedAndConsumed(compressionOpDataSGL, perfData, setup);
+
+exit:
+    if (CPA_TRUE != sessionInitialized)
+    {
+        if (sampleRemoveDcDpSession(setup->dcInstanceHandle, pSessionHandle))
+        {
+            PRINT_ERR("Unable to remove compression session\n");
+        }
+    }
+
+    if (pSessionHandle)
+        qaeMemFreeNUMA((void **)&pSessionHandle);
+
+    /* Free allocated src, dst & cmp memory */
+    if (srcFlatBuffArray)
+        freeBuffersDp(srcFlatBuffArray, numFiles, setup);
+    if (dstFlatBuffArray)
+        freeBuffersDp(dstFlatBuffArray, numFiles, setup);
+    if (cmpFlatBuffArray)
+        freeBuffersDp(cmpFlatBuffArray, numFiles, setup);
+    /* Free SGL related memory */
+    freeSGLsOpData(compressionOpDataSGL, numFiles, setup);
+    freeSGLsOpData(decompressionOpDataSGL, numFiles, setup);
+    freeSGLArray(compSGLArray, numFiles, setup);
+    freeSGLArray(decompSGLArray, numFiles, setup);
 
     return status;
 }
@@ -1289,7 +2199,7 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
     }
 
     srcFlatBuffArray = qaeMemAllocNUMA(
-        (numFiles * sizeof(CpaPhysFlatBuffer)), nodeId, BYTE_ALIGNMENT_64);
+        (numFiles * sizeof(CpaPhysFlatBuffer **)), nodeId, BYTE_ALIGNMENT_64);
     /* Check for NULL */
     if (NULL == srcFlatBuffArray)
     {
@@ -1298,7 +2208,7 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
     }
 
     dstFlatBuffArray = qaeMemAllocNUMA(
-        (numFiles * sizeof(CpaPhysFlatBuffer)), nodeId, BYTE_ALIGNMENT_64);
+        (numFiles * sizeof(CpaPhysFlatBuffer **)), nodeId, BYTE_ALIGNMENT_64);
     /* Check for NULL */
     if (NULL == dstFlatBuffArray)
     {
@@ -1308,7 +2218,7 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
     }
 
     cmpFlatBuffArray = qaeMemAllocNUMA(
-        (numFiles * sizeof(CpaPhysFlatBuffer)), nodeId, BYTE_ALIGNMENT_64);
+        (numFiles * sizeof(CpaPhysFlatBuffer **)), nodeId, BYTE_ALIGNMENT_64);
     /* Check for NULL */
     if (NULL == cmpFlatBuffArray)
     {
@@ -1319,7 +2229,7 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
     }
 
     compressionOpData = qaeMemAllocNUMA(
-        (numFiles * sizeof(CpaDcDpOpData)), nodeId, BYTE_ALIGNMENT_64);
+        (numFiles * sizeof(CpaDcDpOpData **)), nodeId, BYTE_ALIGNMENT_64);
     /* Check for NULL */
     if (NULL == compressionOpData)
     {
@@ -1331,7 +2241,7 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
     }
 
     decompressionOpData = qaeMemAllocNUMA(
-        (numFiles * sizeof(CpaDcDpOpData)), nodeId, BYTE_ALIGNMENT_64);
+        (numFiles * sizeof(CpaDcDpOpData **)), nodeId, BYTE_ALIGNMENT_64);
     /* Check for NULL */
     if (NULL == decompressionOpData)
     {
@@ -1342,7 +2252,6 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
         PRINT_ERR("unable to allocate decompressionOpData \n");
         return CPA_STATUS_FAIL;
     }
-
     /* populate the flat buffer array with number of buffers required
      * for each file and allocate the memory
      */
@@ -1369,7 +2278,6 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             freeBuffersDp(cmpFlatBuffArray, i, setup);
             freeOpDataDp(compressionOpData, i, setup);
             freeOpDataDp(decompressionOpData, i, setup);
-
             return CPA_STATUS_FAIL;
         }
 
@@ -1386,7 +2294,6 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             freeBuffersDp(cmpFlatBuffArray, i, setup);
             freeOpDataDp(compressionOpData, i, setup);
             freeOpDataDp(decompressionOpData, i, setup);
-
             return CPA_STATUS_FAIL;
         }
 
@@ -1403,7 +2310,6 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             freeBuffersDp(cmpFlatBuffArray, i, setup);
             freeOpDataDp(compressionOpData, i, setup);
             freeOpDataDp(decompressionOpData, i, setup);
-
             return CPA_STATUS_FAIL;
         }
 
@@ -1420,7 +2326,6 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             freeBuffersDp(cmpFlatBuffArray, i, setup);
             freeOpDataDp(compressionOpData, i, setup);
             freeOpDataDp(decompressionOpData, i, setup);
-
             return CPA_STATUS_FAIL;
         }
 
@@ -1437,34 +2342,48 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             freeBuffersDp(cmpFlatBuffArray, i, setup);
             freeOpDataDp(compressionOpData, i, setup);
             freeOpDataDp(decompressionOpData, i, setup);
+            return CPA_STATUS_FAIL;
+        }
+    }
+    {
+        /* For compression,the destination buffer size is obtained using
+         * Compress Bound API.*/
+        status = qatGetCompressBoundDestinationBufferSize(
+            setup, bufferSize, &destBufferSize);
+
+        if (CPA_STATUS_UNSUPPORTED == status)
+        {
+            PRINT("Algoritham Unsupported on this instance\n");
+            freeBuffersDp(srcFlatBuffArray, numFiles, setup);
+            freeBuffersDp(dstFlatBuffArray, numFiles, setup);
+            freeBuffersDp(cmpFlatBuffArray, numFiles, setup);
+            freeOpDataDp(compressionOpData, numFiles, setup);
+            freeOpDataDp(decompressionOpData, numFiles, setup);
+            return CPA_STATUS_UNSUPPORTED;
+        }
+        else if (CPA_STATUS_SUCCESS != status)
+        {
+            PRINT_ERR(
+                "Unable to get the destination buffer size using Compress "
+                "Bound API\n");
+            freeBuffersDp(srcFlatBuffArray, numFiles, setup);
+            freeBuffersDp(dstFlatBuffArray, numFiles, setup);
+            freeBuffersDp(cmpFlatBuffArray, numFiles, setup);
+            freeOpDataDp(compressionOpData, numFiles, setup);
+            freeOpDataDp(decompressionOpData, numFiles, setup);
 
             return CPA_STATUS_FAIL;
         }
     }
 
-    /* For compression,the destination buffer size is obtained using
-     * Compress Bound API.*/
-    status = qatGetCompressBoundDestinationBufferSize(
-        setup, bufferSize, &destBufferSize);
-
-    if (CPA_STATUS_SUCCESS != status)
-    {
-        PRINT_ERR("Unable to get the destination buffer size using Compress "
-                  "Bound API\n");
-        freeBuffersDp(srcFlatBuffArray, numFiles, setup);
-        freeBuffersDp(dstFlatBuffArray, numFiles, setup);
-        freeBuffersDp(cmpFlatBuffArray, numFiles, setup);
-        freeOpDataDp(compressionOpData, numFiles, setup);
-        freeOpDataDp(decompressionOpData, numFiles, setup);
-
-        return CPA_STATUS_FAIL;
-    }
-
     /* Allocate flat buffers for each file */
     for (i = 0; i < numFiles; i++)
     {
-        status = createBuffersDp(
-            bufferSize, setup->numberOfBuffers[i], srcFlatBuffArray[i], nodeId);
+        status = createBuffersDp(bufferSize,
+                                 setup->numberOfBuffers[i],
+                                 srcFlatBuffArray[i],
+                                 nodeId,
+                                 0);
 
         if (CPA_STATUS_SUCCESS != status)
         {
@@ -1474,7 +2393,6 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             freeBuffersDp(cmpFlatBuffArray, numFiles, setup);
             freeOpDataDp(compressionOpData, numFiles, setup);
             freeOpDataDp(decompressionOpData, numFiles, setup);
-
             return CPA_STATUS_FAIL;
         }
 
@@ -1489,14 +2407,14 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             freeBuffersDp(cmpFlatBuffArray, numFiles, setup);
             freeOpDataDp(compressionOpData, numFiles, setup);
             freeOpDataDp(decompressionOpData, numFiles, setup);
-
             return CPA_STATUS_FAIL;
         }
 
         status = createBuffersDp(destBufferSize,
                                  setup->numberOfBuffers[i],
                                  dstFlatBuffArray[i],
-                                 nodeId);
+                                 nodeId,
+                                 ZERO_PAD_MS_BYTE);
         if (CPA_STATUS_SUCCESS != status)
         {
             PRINT_ERR("Unable to create buffers for dstFlatBuffArray\n");
@@ -1505,7 +2423,6 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             freeBuffersDp(cmpFlatBuffArray, numFiles, setup);
             freeOpDataDp(compressionOpData, numFiles, setup);
             freeOpDataDp(decompressionOpData, numFiles, setup);
-
             return CPA_STATUS_FAIL;
         }
         if (setup->disableAdditionalCmpbufferSize == CPA_FALSE)
@@ -1516,7 +2433,8 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             status = createBuffersDp((bufferSize * EXTRA_BUFFER),
                                      setup->numberOfBuffers[i],
                                      cmpFlatBuffArray[i],
-                                     nodeId);
+                                     nodeId,
+                                     0);
         }
         else
         {
@@ -1525,7 +2443,8 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             status = createBuffersDp(bufferSize,
                                      setup->numberOfBuffers[i],
                                      cmpFlatBuffArray[i],
-                                     nodeId);
+                                     nodeId,
+                                     0);
         }
 
         if (CPA_STATUS_SUCCESS != status)
@@ -1536,7 +2455,6 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             freeBuffersDp(cmpFlatBuffArray, numFiles, setup);
             freeOpDataDp(compressionOpData, numFiles, setup);
             freeOpDataDp(decompressionOpData, numFiles, setup);
-
             return CPA_STATUS_FAIL;
         }
 
@@ -1551,7 +2469,6 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             freeBuffersDp(cmpFlatBuffArray, numFiles, setup);
             freeOpDataDp(compressionOpData, numFiles, setup);
             freeOpDataDp(decompressionOpData, numFiles, setup);
-
             return CPA_STATUS_FAIL;
         }
     }
@@ -1568,13 +2485,18 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             memcpy(((void *)(uintptr_t)srcFlatBuffArray[i][j]->bufferPhysAddr),
                    fileDataPtr,
                    bufferSize);
+
             fileDataPtr += bufferSize;
         }
-        fileDataPtr = NULL;
     }
+#ifdef SC_WITH_GEN4
+    if (CPA_FALSE == setup->setNsRequest)
+#endif
     {
         /*LZ4S doesn't support COMBINED sessDirection*/
-        if (setup->setupData.compType != CPA_DC_LZ4S)
+        if ((setup->setupData.compType != CPA_DC_LZ4S)
+        )
+
         {
             setup->setupData.sessDirection = CPA_DC_DIR_COMBINED;
         }
@@ -1599,7 +2521,6 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             freeBuffersDp(cmpFlatBuffArray, numFiles, setup);
             freeOpDataDp(compressionOpData, numFiles, setup);
             freeOpDataDp(decompressionOpData, numFiles, setup);
-
             return CPA_STATUS_FAIL;
         }
         /* Setup and init Session */
@@ -1622,7 +2543,6 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             freeBuffersDp(cmpFlatBuffArray, numFiles, setup);
             freeOpDataDp(compressionOpData, numFiles, setup);
             freeOpDataDp(decompressionOpData, numFiles, setup);
-
             return CPA_STATUS_FAIL;
         }
     }
@@ -1692,6 +2612,43 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
                     compressionOpData[i][j],
                     setup->dcInstanceHandle,
                     CPA_ACC_SVC_TYPE_DATA_COMPRESSION);
+#ifdef SC_WITH_GEN4
+            if (CPA_TRUE == setup->setNsRequest)
+            {
+                compressionOpData[i][j]->pSetupData =
+                    (CpaDcNsSetupData *)qaeMemAllocNUMA(
+                        sizeof(CpaDcNsSetupData), 0, 64);
+                if (NULL == compressionOpData[i][j]->pSetupData)
+                {
+                    PRINT_ERR("Unable to allocate Memory for "
+                              "compressionOpData->pSetupData\n ");
+                    freeBuffersDp(srcFlatBuffArray, i, setup);
+                    freeBuffersDp(dstFlatBuffArray, i, setup);
+                    freeBuffersDp(cmpFlatBuffArray, i, setup);
+                    freeOpDataDp(compressionOpData, i, setup);
+                    freeOpDataDp(decompressionOpData, i, setup);
+                    return CPA_STATUS_FAIL;
+                }
+                compressionOpData[i][j]->pSetupData->compLevel =
+                    setup->setupData.compLevel;
+                compressionOpData[i][j]->pSetupData->compType =
+                    setup->setupData.compType;
+                compressionOpData[i][j]->pSetupData->huffType =
+                    setup->setupData.huffType;
+                compressionOpData[i][j]->pSetupData->autoSelectBestHuffmanTree =
+                    setup->setupData.autoSelectBestHuffmanTree;
+                compressionOpData[i][j]->pSetupData->sessDirection =
+                    CPA_DC_DIR_COMPRESS;
+                compressionOpData[i][j]->pSetupData->sessState =
+                    setup->setupData.sessState;
+                if (CPA_DC_LZ4 == setup->setupData.compType ||
+                    CPA_DC_LZ4S == setup->setupData.compType)
+                {
+                    compressionOpData[i][j]->pSetupData->checksum =
+                        CPA_DC_XXHASH32;
+                }
+            }
+#endif
         }
     }
 
@@ -1705,9 +2662,11 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
     else if (CPA_DC_DIR_DECOMPRESS == dcSessDirReq)
     {
         perfData->numOperations = totalBuffs;
-
-        /* Compress the corpus so we can de-compress it */
-        status = compressCorpusPreDecomp(setup, compressionOpData, perfData);
+        {
+            /* Compress the corpus so we can de-compress it */
+            status =
+                compressCorpusPreDecomp(setup, compressionOpData, perfData);
+        }
         if (CPA_STATUS_SUCCESS != status)
         {
             PRINT_ERR("Could not compress corpus before Decompression = %d \n",
@@ -1727,12 +2686,14 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
                 decompressionOpData[i][j]->dcInstance = setup->dcInstanceHandle;
 
                 decompressionOpData[i][j]->pSessionHandle = pSessionHandle;
-
-                decompressionOpData[i][j]
-                    ->srcBuffer = (CpaPhysicalAddr)virtAddrToDevAddr(
-                    (void *)(uintptr_t)dstFlatBuffArray[i][j]->bufferPhysAddr,
-                    setup->dcInstanceHandle,
-                    CPA_ACC_SVC_TYPE_DATA_COMPRESSION);
+                {
+                    decompressionOpData[i][j]->srcBuffer =
+                        (CpaPhysicalAddr)virtAddrToDevAddr(
+                            (void *)(uintptr_t)dstFlatBuffArray[i][j]
+                                ->bufferPhysAddr,
+                            setup->dcInstanceHandle,
+                            CPA_ACC_SVC_TYPE_DATA_COMPRESSION);
+                }
 
                 decompressionOpData[i][j]
                     ->destBuffer = (CpaPhysicalAddr)virtAddrToDevAddr(
@@ -1769,6 +2730,44 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
                         setup->dcInstanceHandle,
                         CPA_ACC_SVC_TYPE_DATA_COMPRESSION);
 
+#ifdef SC_WITH_GEN4
+                if (CPA_TRUE == setup->setNsRequest)
+                {
+                    decompressionOpData[i][j]->pSetupData =
+                        (CpaDcNsSetupData *)qaeMemAllocNUMA(
+                            sizeof(CpaDcNsSetupData), 0, 64);
+                    if (NULL == compressionOpData[i][j]->pSetupData)
+                    {
+                        PRINT_ERR("Unable to allocate Memory for "
+                                  "compressionOpData->pSetupData\n ");
+                        freeBuffersDp(srcFlatBuffArray, i, setup);
+                        freeBuffersDp(dstFlatBuffArray, i, setup);
+                        freeBuffersDp(cmpFlatBuffArray, i, setup);
+                        freeOpDataDp(compressionOpData, i, setup);
+                        freeOpDataDp(decompressionOpData, i, setup);
+                        return CPA_STATUS_FAIL;
+                    }
+                    decompressionOpData[i][j]->pSetupData->compLevel =
+                        setup->setupData.compLevel;
+                    decompressionOpData[i][j]->pSetupData->compType =
+                        setup->setupData.compType;
+                    decompressionOpData[i][j]->pSetupData->huffType =
+                        setup->setupData.huffType;
+                    decompressionOpData[i][j]
+                        ->pSetupData->autoSelectBestHuffmanTree =
+                        setup->setupData.autoSelectBestHuffmanTree;
+                    decompressionOpData[i][j]->pSetupData->sessDirection =
+                        CPA_DC_DIR_DECOMPRESS;
+                    decompressionOpData[i][j]->pSetupData->sessState =
+                        setup->setupData.sessState;
+                    if (CPA_DC_LZ4 == setup->setupData.compType ||
+                        CPA_DC_LZ4S == setup->setupData.compType)
+                    {
+                        decompressionOpData[i][j]->pSetupData->checksum =
+                            CPA_DC_XXHASH32;
+                    }
+                }
+#endif
             }
         }
 
@@ -1796,13 +2795,15 @@ static CpaStatus dcDpPerform(compression_test_params_t *setup)
             setup, compressionOpData, decompressionOpData, perfData);
     }
 
-
     /* Record the bytes consumed and produced from the compressionOpData
      * structures for later printing.
      */
     dcDpSetBytesProducedAndConsumed(compressionOpData, perfData, setup);
 
 exit:
+#ifdef SC_WITH_GEN4
+    if (CPA_FALSE == setup->setNsRequest)
+#endif
     {
         if (CPA_STATUS_SUCCESS != status)
         {
@@ -1841,7 +2842,8 @@ void dcDpPerformance(single_thread_test_data_t *testSetup)
     Cpa16U numInstances = 0;
     CpaInstanceHandle *instances = NULL;
     CpaStatus status = CPA_STATUS_FAIL;
-    CpaDcInstanceCapabilities capabilities = {0};
+    CpaDcInstanceCapabilities *capabilities = NULL;
+
     CpaInstanceInfo2 *instanceInfo = NULL;
 #if defined(USER_SPACE) && !defined(SC_EPOLL_DISABLED)
     int fd = -1;
@@ -1849,7 +2851,6 @@ void dcDpPerformance(single_thread_test_data_t *testSetup)
 
     /* Get the setup pointer */
     tmpSetup = (compression_test_params_t *)(testSetup->setupPtr);
-
 
     /* update the setup structure with setup parameters */
     memcpy(&dcSetup.requestOps, &tmpSetup->requestOps, sizeof(CpaDcOpData));
@@ -1868,8 +2869,15 @@ void dcDpPerformance(single_thread_test_data_t *testSetup)
     /*give our thread a unique memory location to store performance stats*/
     dcSetup.performanceStats = testSetup->performanceStats;
     dcSetup.performanceStats->threadReturnStatus = CPA_STATUS_SUCCESS;
+#ifdef SC_WITH_GEN4
+    dcSetup.setNsRequest = tmpSetup->setNsRequest;
+#endif
+    dcSetup.isUseSGL = tmpSetup->isUseSGL;
+    dcSetup.numFlatsPerSGL = tmpSetup->numFlatsPerSGL;
+    dcSetup.bufferSize = tmpSetup->bufferSize;
     /*initialize number of buffers with NULL*/
     dcSetup.numberOfBuffers = NULL;
+    dcSetup.numberOfSGLs = NULL;
     status = calculateRequireBuffers(&dcSetup);
 
     /*this barrier is to halt this thread when run in user space context, the
@@ -1885,6 +2893,14 @@ void dcDpPerformance(single_thread_test_data_t *testSetup)
         goto exit;
     }
 
+    capabilities = qaeMemAlloc(sizeof(CpaDcInstanceCapabilities));
+    if (capabilities == NULL)
+    {
+       PRINT_ERR("Failed to allocate Memory for capabilities");
+       goto exit;
+    }
+    memset(capabilities, 0, sizeof(CpaDcInstanceCapabilities));
+
     instanceInfo = qaeMemAlloc(sizeof(CpaInstanceInfo2));
     if (instanceInfo == NULL)
     {
@@ -1899,31 +2915,33 @@ void dcDpPerformance(single_thread_test_data_t *testSetup)
     testSetup->statsPrintFunc = NULL;
 
     /* Get the number of instances */
-    status = cpaDcGetNumInstances(&numInstances);
-    if (CPA_STATUS_SUCCESS != status)
     {
-        PRINT_ERR(" Unable to get number of DC instances\n");
-        goto exit;
-    }
-    if (0 == numInstances)
-    {
-        PRINT_ERR(" DC Instances are not present\n");
-        goto exit;
-    }
-    instances = qaeMemAlloc(sizeof(CpaInstanceHandle) * numInstances);
-    if (NULL == instances)
-    {
-        PRINT_ERR("Unable to allocate Memory for Instances\n");
-        goto exit;
-    }
-    /*get the instance handles so that we can start
-     * our thread on the selected instance
-     */
-    status = cpaDcGetInstances(numInstances, instances);
-    if (CPA_STATUS_SUCCESS != status)
-    {
-        PRINT_ERR("get instances failed");
-        goto exit;
+        status = cpaDcGetNumInstances(&numInstances);
+        if (CPA_STATUS_SUCCESS != status)
+        {
+            PRINT_ERR(" Unable to get number of DC instances\n");
+            goto exit;
+        }
+        if (0 == numInstances)
+        {
+            PRINT_ERR(" DC Instances are not present\n");
+            goto exit;
+        }
+        instances = qaeMemAlloc(sizeof(CpaInstanceHandle) * numInstances);
+        if (NULL == instances)
+        {
+            PRINT_ERR("Unable to allocate Memory for Instances\n");
+            goto exit;
+        }
+        /*get the instance handles so that we can start
+         * our thread on the selected instance
+         */
+        status = cpaDcGetInstances(numInstances, instances);
+        if (CPA_STATUS_SUCCESS != status)
+        {
+            PRINT_ERR("get instances failed");
+            goto exit;
+        }
     }
     /* give our thread a logical quick assist instance to use
      * use % to wrap around the max number of instances*/
@@ -1931,13 +2949,13 @@ void dcDpPerformance(single_thread_test_data_t *testSetup)
         instances[(testSetup->logicalQaInstance) % numInstances];
 
     /*check if dynamic compression is supported*/
-    status = cpaDcQueryCapabilities(dcSetup.dcInstanceHandle, &capabilities);
+    status = cpaDcQueryCapabilities(dcSetup.dcInstanceHandle, capabilities);
     if (CPA_STATUS_SUCCESS != status)
     {
         PRINT_ERR("%s::%d cpaDcQueryCapabilities failed", __func__, __LINE__);
         goto exit;
     }
-    if (CPA_FALSE == capabilities.dynamicHuffman &&
+    if (CPA_FALSE == capabilities->dynamicHuffman &&
         tmpSetup->setupData.huffType == CPA_DC_HT_FULL_DYNAMIC)
     {
         PRINT("Dynamic is not supported on logical instance %d\n",
@@ -1952,15 +2970,17 @@ void dcDpPerformance(single_thread_test_data_t *testSetup)
         testSetup->performanceStats->threadReturnStatus = CPA_STATUS_FAIL;
         goto exit;
     }
+#if !defined(SC_BSD_UPSTREAM)
     if (instanceInfo->isPolled == CPA_FALSE)
     {
         PRINT("Data-Plane operations not supported on non-polled instances\n");
         testSetup->performanceStats->threadReturnStatus = CPA_STATUS_FAIL;
         goto exit;
     }
+#endif
     if (CPA_STATUS_SUCCESS !=
         qatDcGetPreTestRecoveryCount(
-            &dcSetup, &capabilities, testSetup->performanceStats))
+            &dcSetup, capabilities, testSetup->performanceStats))
     {
         testSetup->performanceStats->threadReturnStatus = CPA_STATUS_FAIL;
         goto exit;
@@ -1972,6 +2992,8 @@ void dcDpPerformance(single_thread_test_data_t *testSetup)
         qaeMemFree((void **)&instances);
         qaeMemFree((void **)&dcSetup.numberOfBuffers);
         qaeMemFree((void **)&instanceInfo);
+        if (dcSetup.numberOfSGLs)
+            qaeMemFree((void **)&dcSetup.numberOfSGLs);
         sampleCodeThreadExit();
     }
 #if defined(USER_SPACE) && !defined(SC_EPOLL_DISABLED)
@@ -1983,6 +3005,8 @@ void dcDpPerformance(single_thread_test_data_t *testSetup)
         qaeMemFree((void **)&instances);
         qaeMemFree((void **)&dcSetup.numberOfBuffers);
         qaeMemFree((void **)&instanceInfo);
+        if (dcSetup.numberOfSGLs)
+            qaeMemFree((void **)&dcSetup.numberOfSGLs);
         icp_sal_DcPutFileDescriptor(dcSetup.dcInstanceHandle, fd);
         testSetup->performanceStats->threadReturnStatus =
             CPA_STATUS_UNSUPPORTED;
@@ -1995,10 +3019,24 @@ void dcDpPerformance(single_thread_test_data_t *testSetup)
     }
 #endif
 
-
     /*launch function that does all the work*/
-    status = dcDpPerform(&dcSetup);
-    if (CPA_STATUS_SUCCESS != status)
+    if (!dcSetup.isUseSGL)
+    {
+        status = dcDpPerform(&dcSetup);
+    }
+    else
+    {
+        status = dcDpPerformSGL(&dcSetup);
+    }
+    if (CPA_STATUS_UNSUPPORTED == status)
+    {
+        dcPrintTestData(&dcSetup);
+        PRINT("Compression Thread %u Unsupported\n", testSetup->threadID);
+        numCreatedThreads_g--;
+        testSetup->performanceStats->threadReturnStatus =
+            CPA_STATUS_UNSUPPORTED;
+    }
+    else if (CPA_STATUS_SUCCESS != status)
     {
         dcPrintTestData(&dcSetup);
         PRINT_ERR("Compression Thread %u FAILED\n", testSetup->threadID);
@@ -2022,6 +3060,10 @@ exit:
     {
         qaeMemFree((void **)&dcSetup.numberOfBuffers);
     }
+    if (dcSetup.numberOfSGLs != NULL)
+    {
+        qaeMemFree((void **)&dcSetup.numberOfSGLs);
+    }
     if (instances != NULL)
     {
         qaeMemFree((void **)&instances);
@@ -2029,6 +3071,10 @@ exit:
     if (instanceInfo != NULL)
     {
         qaeMemFree((void **)&instanceInfo);
+    }
+    if (capabilities != NULL)
+    {
+        qaeMemFree((void **)&capabilities);
     }
 
     sampleCodeThreadComplete(testSetup->threadID);
@@ -2043,7 +3089,7 @@ EXPORT_SYMBOL(dcDpPerformance);
  *  Check for Non Polling DC Instance.
  ******************************************************************************/
 
-CpaStatus checkDcNonPollingInstance(CpaBoolean *polled)
+static CpaStatus checkDcNonPollingInstance(CpaBoolean *polled)
 {
     Cpa16U numInstances = 0;
     CpaInstanceHandle *instances = NULL;
@@ -2102,6 +3148,14 @@ exit:
 }
 
 /**
+ *****************************************************************************
+ * @ingroup checkDecompNonPollingInstance
+ *
+ * @description
+ *  Check for Non Polling Decomp Instance.
+ ******************************************************************************/
+
+/**
 *****************************************************************************
 *
 *  External Function Interfaces
@@ -2148,18 +3202,21 @@ CpaStatus setupDcDpTest(CpaDcCompType algorithm,
         PRINT_ERR(" Max is %d\n", MAX_THREAD_VARIATION);
         return CPA_STATUS_FAIL;
     }
-
-    status = checkDcNonPollingInstance(&polled);
+    {
+        status = checkDcNonPollingInstance(&polled);
+    }
     if (CPA_STATUS_SUCCESS != status)
     {
         return CPA_STATUS_FAIL;
     }
 
+#if !defined(SC_BSD_UPSTREAM)
     if (polled == CPA_FALSE)
     {
         PRINT("Data-Plane operations not supported on non-polled instances\n");
         return CPA_STATUS_SUCCESS;
     }
+#endif
 
     status = populateCorpus(testBufferSize, corpusType);
     if (CPA_STATUS_SUCCESS != status)
@@ -2167,15 +3224,17 @@ CpaStatus setupDcDpTest(CpaDcCompType algorithm,
         PRINT_ERR("Unable to Populate corpus file\n");
         return CPA_STATUS_FAIL;
     }
-    /*
-     * Create DC instances handles, allocate temporary memory for dynamic
-     * compression and create polling threads(if enabled in configuration)
-     * */
-    status = startDcServices(DYNAMIC_BUFFER_AREA, TEMP_NUM_BUFFS);
-    if (CPA_STATUS_SUCCESS != status)
     {
-        PRINT("Error in Starting Dc Services\n");
-        return CPA_STATUS_FAIL;
+        /*
+         * Create DC instances handles, allocate temporary memory for dynamic
+         * compression and create polling threads(if enabled in configuration)
+         * */
+        status = startDcServices(DYNAMIC_BUFFER_AREA, TEMP_NUM_BUFFS);
+        if (CPA_STATUS_SUCCESS != status)
+        {
+            PRINT("Error in Starting Dc Services\n");
+            return CPA_STATUS_FAIL;
+        }
     }
     /* Get the framework setup pointer */
     /* thread_setup_g is a multi-dimensional array that
@@ -2196,6 +3255,9 @@ CpaStatus setupDcDpTest(CpaDcCompType algorithm,
     /* Set the performance function to the actual performance function
      * that actually does all the performance
      */
+#ifdef SC_WITH_GEN4
+    dcSetup->setNsRequest = isNsRequest_g;
+#endif
     testSetupData_g[testTypeCount_g].performance_function =
         (performance_func_t)dcDpPerformance;
 
@@ -2204,7 +3266,9 @@ CpaStatus setupDcDpTest(CpaDcCompType algorithm,
     /* Data compression setup data */
     dcSetup->setupData.compLevel = compLevel;
     dcSetup->setupData.compType = algorithm;
-    dcSetup->setupData.sessDirection = CPA_DC_DIR_COMPRESS;
+    {
+        dcSetup->setupData.sessDirection = CPA_DC_DIR_COMPRESS;
+    }
     dcSetup->setupData.checksum = gChecksum;
 #ifdef SC_ENABLE_DYNAMIC_COMPRESSION
     dcSetup->setupData.huffType = huffmanType;
@@ -2226,6 +3290,19 @@ CpaStatus setupDcDpTest(CpaDcCompType algorithm,
     dcSetup->isDpApi = CPA_TRUE;
     dcSetup->disableAdditionalCmpbufferSize = disableAdditionalCmpbufferSize_g;
 
+#if DC_API_VERSION_AT_LEAST(3, 2) && defined(__FreeBSD__)
+    if (enableDcDpFlatsToSGLConv_g)
+    {
+        dcSetup->isUseSGL = CPA_TRUE;
+        dcSetup->numFlatsPerSGL = dcDpNumFlatsPerSGL_g;
+        /* Lets break buffer to few smaller to compose one SGL later on */
+        dcSetup->bufferSize /= dcSetup->numFlatsPerSGL;
+    }
+    else
+    {
+        dcSetup->isUseSGL = CPA_FALSE;
+    }
+#endif /* DC_API_VERSION_AT_LEAST(3, 2) */
 
     /* Ensure that the numbers of buffers required for each file is less
      * than or equal to the batch/enqueue amount.
@@ -2248,7 +3325,6 @@ CpaStatus setupDcDpTest(CpaDcCompType algorithm,
 
             return CPA_STATUS_FAIL;
         }
-        numberOfBuffersPerFile = 0;
     }
 
     return status;

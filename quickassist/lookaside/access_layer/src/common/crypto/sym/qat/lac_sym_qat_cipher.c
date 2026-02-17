@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -274,6 +222,11 @@ static const uint8_t key_size_f8[] = {
     ICP_QAT_HW_CIPHER_ALGO_AES256 /* ICP_QAT_HW_AES_256_F8_KEY_SZ */
 };
 
+/* This array must be kept aligned with CpaCySymCipherAlgorithm enum but
+ * offset by -1 as that enum starts at 1. LacSymQat_CipherGetCfgData()
+ * below relies on that alignment and uses that enum -1 to index into this
+ * array.
+ */
 typedef struct _icp_qat_hw_cipher_info
 {
     icp_qat_hw_cipher_algo_t algorithm;
@@ -606,7 +559,7 @@ void LacSymQat_CipherGetCfgData(lac_session_desc_t *pSession,
     sal_crypto_service_t *pService =
         (sal_crypto_service_t *)pSession->pInstance;
 
-    CpaCySymCipherAlgorithm cipherAlgorithm = 0;
+    int cipherIdx = 0;
     icp_qat_hw_cipher_dir_t cipherDirection = 0;
 
     LAC_ENSURE_NOT_NULL(pSession);
@@ -621,27 +574,28 @@ void LacSymQat_CipherGetCfgData(lac_session_desc_t *pSession,
     *pMode = ICP_QAT_HW_CIPHER_ECB_MODE;
     *pDir = ICP_QAT_HW_CIPHER_ENCRYPT;
 
-    /* decrease since it's numbered from 1 instead of 0 */
-    cipherAlgorithm = pSession->cipherAlgorithm - 1;
+    /* offset index as CpaCySymCipherAlgorithm enum starts from 1, not from 0 */
+    cipherIdx = pSession->cipherAlgorithm - 1;
     cipherDirection =
         pSession->cipherDirection == CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT
             ? ICP_QAT_HW_CIPHER_ENCRYPT
             : ICP_QAT_HW_CIPHER_DECRYPT;
 
-    LAC_ENSURE(cipherAlgorithm < CPA_CY_SYM_CIPHER_SM4_CTR,
-               "Invalid cipherAlgorithm value\n");
-    LAC_ENSURE(cipherDirection <= ICP_QAT_HW_CIPHER_DECRYPT,
-               "Invalid cipherDirection value\n");
+    /* Boundary check against the last value in the algorithm enum */
+    LAC_ENSURE_RETURN_VOID(pSession->cipherAlgorithm <=
+                               CPA_CY_SYM_CIPHER_SM4_CTR,
+                           "Invalid cipherAlgorithm value\n");
+    LAC_ENSURE_RETURN_VOID(cipherDirection <= ICP_QAT_HW_CIPHER_DECRYPT,
+                           "Invalid cipherDirection value\n");
 
-    *pAlgorithm = icp_qat_alg_info[cipherAlgorithm].algorithm;
-    *pMode = icp_qat_alg_info[cipherAlgorithm].mode;
-    *pDir = icp_qat_alg_info[cipherAlgorithm].dir[cipherDirection];
-    *pKey_convert =
-        icp_qat_alg_info[cipherAlgorithm].key_convert[cipherDirection];
+    *pAlgorithm = icp_qat_alg_info[cipherIdx].algorithm;
+    *pMode = icp_qat_alg_info[cipherIdx].mode;
+    *pDir = icp_qat_alg_info[cipherIdx].dir[cipherDirection];
+    *pKey_convert = icp_qat_alg_info[cipherIdx].key_convert[cipherDirection];
 
-    if (IS_KEY_DEP_NO != icp_qat_alg_info[cipherAlgorithm].isKeyLenDepend)
+    if (IS_KEY_DEP_NO != icp_qat_alg_info[cipherIdx].isKeyLenDepend)
     {
-        *pAlgorithm = icp_qat_alg_info[cipherAlgorithm]
+        *pAlgorithm = icp_qat_alg_info[cipherIdx]
                           .pAlgByKeySize[pSession->cipherKeyLenInBytes];
         LAC_ENSURE(ICP_QAT_HW_CIPHER_ALGO_NULL != *pAlgorithm,
                    "Invalid AES key size\n");

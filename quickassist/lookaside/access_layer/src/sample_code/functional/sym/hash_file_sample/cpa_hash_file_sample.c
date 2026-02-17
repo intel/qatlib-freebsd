@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -71,6 +19,8 @@
 #include "cpa_cy_im.h"
 #include "cpa_cy_sym.h"
 #include "cpa_sample_utils.h"
+#include <sys/stat.h>
+#include <unistd.h>
 
 extern int gDebugParam;
 
@@ -82,6 +32,70 @@ extern int gDebugParam;
 #define SAMPLE_BUFF_SIZE 4096
 
 extern char *gFileName;
+
+typedef struct file_data_s
+{
+    Cpa8U **pSrcData;
+    Cpa32U *bufferSize;
+} file_data_t;
+
+/*
+ * This function copies a file to memory
+ */
+CpaStatus sample_getFile(const char *filename, file_data_t *file_data)
+{
+    FILE *srcFile = NULL;
+    Cpa8U *pBuff = NULL;
+    struct stat st = { 0 };
+    long file_size = 0;
+
+    /* Get filesize */
+    if (0 != stat(filename, &st))
+    {
+        PRINT_ERR("Could not get the file %s size\n", filename);
+        return CPA_STATUS_FAIL;
+    }
+    file_size = st.st_size;
+
+    /* Allocate memory for the file */
+    pBuff = (Cpa8U *)qaeMemAlloc(file_size);
+    if (NULL == pBuff)
+    {
+        PRINT_ERR("Could not allocate memory for the file copy\n");
+        return CPA_STATUS_FAIL;
+    }
+
+    memset(pBuff, 0, file_size);
+    /* Open the file */
+    srcFile = fopen((const char *)filename, "r");
+    if (NULL == (srcFile))
+    {
+        PRINT_ERR("Could not open source file %s\n", filename);
+        qaeMemFree((void **)&pBuff);
+        return CPA_STATUS_FAIL;
+    }
+
+    /* Read the file */
+    *(file_data->bufferSize) = fread(pBuff, 1, file_size, srcFile);
+    if (*(file_data->bufferSize) != file_size)
+    {
+        PRINT_ERR("Filesize doesn't match\n");
+        qaeMemFree((void **)&pBuff);
+        fclose(srcFile);
+        return CPA_STATUS_FAIL;
+    }
+
+    fclose(srcFile);
+    *(file_data->pSrcData) = pBuff;
+    return CPA_STATUS_SUCCESS;
+}
+
+/* Free the memory after getting the file and copying the data */
+CpaStatus sample_freeFile(file_data_t *file_data)
+{
+    qaeMemFree((void **)(file_data->pSrcData));
+    return CPA_STATUS_SUCCESS;
+}
 
 /* Forward declaration */
 CpaStatus hashFileSample(void);
@@ -139,11 +153,18 @@ static CpaStatus hashPerformOp(CpaInstanceHandle cyInstHandle,
     Cpa8U *pDigestBuffer = NULL;
     FILE *srcFile = NULL;
     int i = 0;
+    CpaCySymCapabilitiesInfo symCapInfo = { 0 };
+    file_data_t inputData = { 0 };
+    CpaFlatBuffer inputBuffer = { 0 };
 
     /* The following variables are allocated on the stack because we block
      * until the callback comes back. If a non-blocking approach was to be
      * used then these variables should be dynamically allocated */
     struct COMPLETION_STRUCT complete;
+    /*
+     * Initialize the completion variable which is used by the callback
+     * function */
+    COMPLETION_INIT((&complete));
 
     /* Open file */
     srcFile = fopen(gFileName, "r");
@@ -155,6 +176,33 @@ static CpaStatus hashPerformOp(CpaInstanceHandle cyInstHandle,
     else
     {
         PRINT_DBG("Processing file %s\n", gFileName);
+    }
+
+    status = cpaCySymQueryCapabilities(cyInstHandle, &symCapInfo);
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("Failed to query capabilities, status = %d\n", status);
+        fclose(srcFile);
+        return status;
+    }
+
+    /* Check if partial packet support is available */
+    if (!symCapInfo.partialPacketSupported)
+    {
+        PRINT_DBG(
+            "Partial packets are not supported, using full packets instead.\n");
+
+        inputData.bufferSize = &inputBuffer.dataLenInBytes;
+        inputData.pSrcData = &inputBuffer.pData;
+        status = sample_getFile(gFileName, &inputData);
+
+        if (status != CPA_STATUS_SUCCESS)
+        {
+            PRINT_ERR("sample_getFile failed\n");
+            fclose(srcFile);
+            return status;
+        }
+        bufferSize = inputBuffer.dataLenInBytes;
     }
 
     /* get meta information size */
@@ -200,34 +248,73 @@ static CpaStatus hashPerformOp(CpaInstanceHandle cyInstHandle,
 
     if (CPA_STATUS_SUCCESS == status)
     {
-        /** initialization for callback; the "complete" variable is used by the
-         * callback function to indicate it has been called*/
-        COMPLETION_INIT((&complete));
-
-        //<snippet name="hashFile">
-        while (!feof(srcFile))
+        /* Check if partial packet processing is supported */
+        if (symCapInfo.partialPacketSupported)
         {
-            /* read from file into src buffer */
-            pBufferList->pBuffers->dataLenInBytes =
-                fread(pSrcBuffer, 1, SAMPLE_BUFF_SIZE, srcFile);
+            //<snippet name="hashFile">
+            while (!feof(srcFile))
+            {
+                /* read from file into src buffer */
+                pBufferList->pBuffers->dataLenInBytes =
+                    fread(pSrcBuffer, 1, SAMPLE_BUFF_SIZE, srcFile);
+                /* If we have reached the end of file set the last partial flag
+                 */
+                if (feof(srcFile))
+                {
+                    pOpData->packetType = CPA_CY_SYM_PACKET_TYPE_LAST_PARTIAL;
+                }
+                else
+                {
+                    pOpData->packetType = CPA_CY_SYM_PACKET_TYPE_PARTIAL;
+                }
+                pOpData->sessionCtx = sessionCtx;
+                pOpData->hashStartSrcOffsetInBytes = 0;
+                pOpData->messageLenToHashInBytes =
+                    pBufferList->pBuffers->dataLenInBytes;
+                pOpData->pDigestResult = pDigestBuffer;
+                PRINT_DBG("cpaCySymPerformOp\n");
+                /** Perform symmetric operation */
+                status = cpaCySymPerformOp(
+                    cyInstHandle,
+                    (void *)&complete, /* data sent as is to the callback
+                                          function*/
+                    pOpData,           /* operational data struct */
+                    pBufferList,       /* source buffer list */
+                    pBufferList, /* same src & dst for an in-place operation*/
+                    NULL);
 
-            /* If we have reached the end of file set the last partial flag */
-            if (feof(srcFile))
-            {
-                pOpData->packetType = CPA_CY_SYM_PACKET_TYPE_LAST_PARTIAL;
+                if (CPA_STATUS_SUCCESS != status)
+                {
+                    PRINT_ERR("cpaCySymPerformOp failed. (status = %d)\n",
+                              status);
+                    break;
+                }
+
+                if (CPA_STATUS_SUCCESS == status)
+                {
+                    /** wait until the completion of the operation*/
+                    if (!COMPLETION_WAIT((&complete), TIMEOUT_MS))
+                    {
+                        PRINT_ERR(
+                            "timeout or interruption in cpaCySymPerformOp\n");
+                        status = CPA_STATUS_FAIL;
+                        break;
+                    }
+                }
             }
-            else
-            {
-                pOpData->packetType = CPA_CY_SYM_PACKET_TYPE_PARTIAL;
-            }
+        }
+        else
+        {
+            /* Process as a single full packet if partial packets are not
+             * supported */
+            memcpy(pSrcBuffer, inputBuffer.pData, inputBuffer.dataLenInBytes);
+            pOpData->packetType = CPA_CY_SYM_PACKET_TYPE_FULL;
             pOpData->sessionCtx = sessionCtx;
             pOpData->hashStartSrcOffsetInBytes = 0;
-            pOpData->messageLenToHashInBytes =
-                pBufferList->pBuffers->dataLenInBytes;
+            pOpData->messageLenToHashInBytes = inputBuffer.dataLenInBytes;
             pOpData->pDigestResult = pDigestBuffer;
 
             PRINT_DBG("cpaCySymPerformOp\n");
-            /** Perform symmetric operation */
             status = cpaCySymPerformOp(
                 cyInstHandle,
                 (void *)&complete, /* data sent as is to the callback function*/
@@ -239,7 +326,6 @@ static CpaStatus hashPerformOp(CpaInstanceHandle cyInstHandle,
             if (CPA_STATUS_SUCCESS != status)
             {
                 PRINT_ERR("cpaCySymPerformOp failed. (status = %d)\n", status);
-                break;
             }
 
             if (CPA_STATUS_SUCCESS == status)
@@ -249,12 +335,9 @@ static CpaStatus hashPerformOp(CpaInstanceHandle cyInstHandle,
                 {
                     PRINT_ERR("timeout or interruption in cpaCySymPerformOp\n");
                     status = CPA_STATUS_FAIL;
-                    break;
                 }
             }
         }
-
-        //</snippet>
     }
 
     if (CPA_STATUS_SUCCESS == status)
@@ -282,6 +365,10 @@ static CpaStatus hashPerformOp(CpaInstanceHandle cyInstHandle,
     PHYS_CONTIG_FREE(pBufferMeta);
     PHYS_CONTIG_FREE(pDigestBuffer);
     OS_FREE(pOpData);
+    if (NULL != inputData.pSrcData)
+    {
+        sample_freeFile(&inputData);
+    }
 
     COMPLETION_DESTROY(&complete);
 
@@ -307,7 +394,7 @@ CpaStatus hashFileSample(void)
      * In this simplified version of instance discovery, we discover
      * exactly one instance of a crypto service.
      */
-    sampleCyGetInstance(&cyInstHandle);
+    sampleSymGetInstance(&cyInstHandle);
     if (cyInstHandle == NULL)
     {
         return CPA_STATUS_FAIL;

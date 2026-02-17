@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -72,9 +20,9 @@
  * @defgroup cpa CPA API
  *
  * @description
- *      This is the top level API definition for Intel(R) QuickAssist Technology.
- *		It contains structures, data types and definitions that are common
- *		across the interface.
+ *      This is the top level API definition for Intel(R) QuickAssist
+ *      Technology. It contains structures, data types and definitions that are
+ *      common across the interface.
  *
  *****************************************************************************/
 
@@ -100,6 +48,87 @@ extern "C" {
 #include "cpa_types.h"
 
 /**
+ ******************************************************************************
+ * @ingroup cpa
+ *      CPA Version Number
+ * @description
+ *      The CPA API version. This has major and minor definitions and the
+ *      combination of those represent the complete version number for this
+ *      interface. It will be incremented on code changes in the C headers in
+ *      the top-level directory and its subdirectories. Helper macros are
+ *      provided to simplify version number comparisons for "at least" and
+ *      "less than" cases.
+ * @note
+ *      The CPA API version supersedes the DC and CY versions already existing
+ *      which represent subsets of this interface. The CPA version will start
+ *      at v5.0 and the CY and DC versions will move to the same version and
+ *      be kept in line with it in future.
+ * @note
+ *     Applications which are intended to be compiled against both this version
+ *     and earlier versions of the API which did not include this CPA version
+ *     should never use the macros with values less than 5.0 and should use the
+ *     following pattern to avoid compilation issues:
+ *     #ifdef CPA_API_VERSION_AT_LEAST
+ *     #if CPA_API_VERSION_AT_LEAST(5,2)
+ *         < call APIs that only exist in v5.2 >
+ *     #endif
+ *     #endif
+ *
+ *****************************************************************************/
+
+/**
+ ******************************************************************************
+ * @ingroup cpa
+ *      CPA Major Version Number
+ * @description
+ *      The CPA API major version number. This number will be incremented
+ *      when significant changes to the API have occurred.
+ *
+ *****************************************************************************/
+#define CPA_API_VERSION_NUM_MAJOR (5)
+
+/**
+ *****************************************************************************
+ * @ingroup cpa
+ *      CPA Minor Version Number
+ * @description
+ *      The CPA API minor version number. This number will be incremented
+ *      when minor changes to the API have occurred.
+ *
+ *****************************************************************************/
+#define CPA_API_VERSION_NUM_MINOR (3)
+
+/**
+ *****************************************************************************
+ * @ingroup cpa
+ *       CPA API version at least
+ * @description
+ *      The minimal supported CPA API version. Allow to check if the API
+ *      version is equal or above some version to avoid compilation issues
+ *      with an older API version.
+ *
+ *****************************************************************************/
+#define CPA_API_VERSION_AT_LEAST(major, minor)                                 \
+    (CPA_API_VERSION_NUM_MAJOR > major ||                                      \
+     (CPA_API_VERSION_NUM_MAJOR == major &&                                    \
+      CPA_API_VERSION_NUM_MINOR >= minor))
+
+/**
+ *****************************************************************************
+ * @ingroup cpa
+ *       CPA API version less than
+ * @description
+ *      The maximum supported CPA API version. Allow to check if the API
+ *      version is below some version to avoid compilation issues with a newer
+ *      API version.
+ *
+ *****************************************************************************/
+#define CPA_API_VERSION_LESS_THAN(major, minor)                                \
+    (CPA_API_VERSION_NUM_MAJOR < major ||                                      \
+     (CPA_API_VERSION_NUM_MAJOR == major &&                                    \
+      CPA_API_VERSION_NUM_MINOR < minor))
+
+/**
  *****************************************************************************
  * @ingroup cpa_BaseDataTypes
  *      Instance handle type.
@@ -112,7 +141,7 @@ extern "C" {
  *      @ref CPA_INSTANCE_HANDLE_SINGLE.
  *
  *****************************************************************************/
-typedef void * CpaInstanceHandle;
+typedef void *CpaInstanceHandle;
 
 /**
  *****************************************************************************
@@ -168,8 +197,7 @@ typedef Cpa64U CpaPhysicalAddr;
  *      None
  *
  *****************************************************************************/
-typedef CpaPhysicalAddr (*CpaVirtualToPhysical)(void * pVirtualAddr);
-
+typedef CpaPhysicalAddr (*CpaVirtualToPhysical)(void *pVirtualAddr);
 
 /**
  *****************************************************************************
@@ -182,7 +210,8 @@ typedef CpaPhysicalAddr (*CpaVirtualToPhysical)(void * pVirtualAddr);
  *      physical memory as determined by @ref CpaInstanceInfo2.
  *
  *****************************************************************************/
-typedef struct _CpaFlatBuffer {
+typedef struct _CpaFlatBuffer
+{
     Cpa32U dataLenInBytes;
     /**< Data length specified in bytes.
      * When used as an input parameter to a function, the length specifies
@@ -191,7 +220,7 @@ typedef struct _CpaFlatBuffer {
      * specifies the maximum length of the buffer on return (i.e. the allocated
      * length).  The implementation will not write past this length.  On return,
      * the length is always unchanged. */
-  Cpa8U *pData;
+    Cpa8U *pData;
     /**< The data pointer is a virtual address, however the actual data pointed
      * to is required to be in contiguous physical memory unless the field
      requiresPhysicallyContiguousMemory in CpaInstanceInfo2 is false. */
@@ -217,7 +246,8 @@ typedef struct _CpaFlatBuffer {
  *      returned size (in bytes) may then be passed in a memory allocation
  *      routine to allocate the pPrivateMetaData memory.
  *****************************************************************************/
-typedef struct _CpaBufferList {
+typedef struct _CpaBufferList
+{
     Cpa32U numBuffers;
     /**< Number of buffers in the list */
     CpaFlatBuffer *pBuffers;
@@ -245,7 +275,8 @@ typedef struct _CpaBufferList {
  *      Functions taking this structure do not need to do any virtual to
  *      physical address translation before writing the buffer to hardware.
  *****************************************************************************/
-typedef struct _CpaPhysFlatBuffer {
+typedef struct _CpaPhysFlatBuffer
+{
     Cpa32U dataLenInBytes;
     /**< Data length specified in bytes.
      * When used as an input parameter to a function, the length specifies
@@ -277,7 +308,8 @@ typedef struct _CpaPhysFlatBuffer {
  *      case, the individual "flat" buffers are represented using
  *      physical, rather than virtual, addresses.
  *****************************************************************************/
-typedef struct _CpaPhysBufferList {
+typedef struct _CpaPhysBufferList
+{
     Cpa64U reserved0;
     /**< Reserved for internal usage */
     Cpa32U numBuffers;
@@ -298,7 +330,8 @@ typedef struct _CpaPhysBufferList {
  *      CRC algorithm, other than those natively supported by the API.
  *
  ****************************************************************************/
-typedef struct _CpaCrcControlData {
+typedef struct _CpaCrcControlData
+{
     Cpa64U polynomial;
     /**< Polynomial used for CRC64 calculation.*/
     Cpa64U initialValue;
@@ -320,7 +353,6 @@ typedef struct _CpaCrcControlData {
  *      type CpaPhysBufferList, rather than simply an array of bytes.
  ****************************************************************************/
 #define CPA_DP_BUFLIST ((Cpa32U)0xFFFFFFFF)
-
 
 /**
  *****************************************************************************
@@ -391,19 +423,19 @@ typedef Cpa32S CpaStatus;
  *   Maximum length of the Overall Status String (including generic and specific
  *   strings returned by calls to cpaXxGetStatusText) */
 
-#define CPA_STATUS_STR_SUCCESS       ("Operation was successful:")
+#define CPA_STATUS_STR_SUCCESS ("Operation was successful:")
 /**<
  *  @ingroup cpa_BaseDataTypes
  *   Status string for @ref CPA_STATUS_SUCCESS. */
-#define CPA_STATUS_STR_FAIL          ("General or unspecified error occurred:")
+#define CPA_STATUS_STR_FAIL ("General or unspecified error occurred:")
 /**<
  *  @ingroup cpa_BaseDataTypes
  *   Status string for @ref CPA_STATUS_FAIL. */
-#define CPA_STATUS_STR_RETRY         ("Recoverable error occurred:")
+#define CPA_STATUS_STR_RETRY ("Recoverable error occurred:")
 /**<
  *  @ingroup cpa_BaseDataTypes
  *   Status string for @ref CPA_STATUS_RETRY. */
-#define CPA_STATUS_STR_RESOURCE      ("Required resource unavailable:")
+#define CPA_STATUS_STR_RESOURCE ("Required resource unavailable:")
 /**<
  *  @ingroup cpa_BaseDataTypes
  *   Status string for @ref CPA_STATUS_RESOURCE. */
@@ -411,11 +443,11 @@ typedef Cpa32S CpaStatus;
 /**<
  *  @ingroup cpa_BaseDataTypes
  *   Status string for @ref CPA_STATUS_INVALID_PARAM. */
-#define CPA_STATUS_STR_FATAL         ("Fatal error has occurred:")
+#define CPA_STATUS_STR_FATAL ("Fatal error has occurred:")
 /**<
  *  @ingroup cpa_BaseDataTypes
  *   Status string for @ref CPA_STATUS_FATAL. */
-#define CPA_STATUS_STR_UNSUPPORTED   ("Operation not supported:")
+#define CPA_STATUS_STR_UNSUPPORTED ("Operation not supported:")
 /**<
  *  @ingroup cpa_BaseDataTypes
  *   Status string for @ref CPA_STATUS_UNSUPPORTED. */
@@ -506,7 +538,7 @@ typedef enum _CpaInstanceState
  *****************************************************************************/
 typedef enum _CpaOperationalState
 {
-    CPA_OPER_STATE_DOWN= 0,
+    CPA_OPER_STATE_DOWN = 0,
     /**< Instance is not available for use. May not yet be initialized,
      * or stopped. */
     CPA_OPER_STATE_UP
@@ -539,7 +571,8 @@ typedef enum _CpaOperationalState
  *      Structure that contains the information to describe the instance.
  *
  *****************************************************************************/
-typedef struct _CpaInstanceInfo {
+typedef struct _CpaInstanceInfo
+{
     enum _CpaInstanceType type;
     /**< Type definition for this instance. */
     enum _CpaInstanceState state;
@@ -577,7 +610,8 @@ typedef struct _CpaInstanceInfo {
  *      number of the accelerators.
  *
  *****************************************************************************/
-typedef struct _CpaPhysicalInstanceId {
+typedef struct _CpaPhysicalInstanceId
+{
     Cpa16U packageId;
     /**< Identifies the package within which the accelerator is
      * contained. */
@@ -601,7 +635,8 @@ typedef struct _CpaPhysicalInstanceId {
  *      Structure that contains the information to describe the instance.
  *
  *****************************************************************************/
-typedef struct _CpaInstanceInfo2 {
+typedef struct _CpaInstanceInfo2
+{
     CpaAccelerationServiceType accelerationServiceType;
     /**< Type of service provided by this instance. */
 #define CPA_INST_VENDOR_NAME_SIZE CPA_INSTANCE_MAX_NAME_SIZE_IN_BYTES
@@ -717,9 +752,9 @@ typedef enum _CpaInstanceEvent
     CPA_INSTANCE_EVENT_FATAL_ERROR
     /**< Event type that triggers the registered instance notification callback
      * function when an error has been detected that requires the device
-     * to be reset. 
-     * This event will be sent by all instances using the device, both on the 
-     * host and guests. 
+     * to be reset.
+     * This event will be sent by all instances using the device, both on the
+     * host and guests.
      */
 } CpaInstanceEvent;
 
@@ -730,13 +765,13 @@ typedef enum _CpaInstanceEvent
  *****************************************************************************
  * @file cpa.h
  * @ingroup cpa
- *      Get the number of Acceleration Service instances that are supported by 
+ *      Get the number of Acceleration Service instances that are supported by
  *      the API implementation.
  *
  * @description
  *     This function will get the number of instances that are supported
- *     for the required Acceleration Service by an implementation of the CPA 
- *     API. This number is then used to determine the size of the array that 
+ *     for the required Acceleration Service by an implementation of the CPA
+ *     API. This number is then used to determine the size of the array that
  *     must be passed to @ref cpaGetInstances().
  *
  * @context
@@ -774,16 +809,15 @@ typedef enum _CpaInstanceEvent
  *      cpaGetInstances
  *
  *****************************************************************************/
-CpaStatus
-cpaGetNumInstances(
-        const CpaAccelerationServiceType accelerationServiceType,
-        Cpa16U *pNumInstances);
+CpaStatus cpaGetNumInstances(
+    const CpaAccelerationServiceType accelerationServiceType,
+    Cpa16U *pNumInstances);
 
 /**
  *****************************************************************************
  * @file cpa.h
  * @ingroup cpa
- *      Get the handles to the required Acceleration Service instances that are 
+ *      Get the handles to the required Acceleration Service instances that are
  *      supported by the API implementation.
  *
  * @description
@@ -835,15 +869,14 @@ cpaGetNumInstances(
  *      cpaGetNumInstances
  *
  *****************************************************************************/
-CpaStatus
-cpaGetInstances(
-        const CpaAccelerationServiceType accelerationServiceType,
-        Cpa16U numInstances,
-        CpaInstanceHandle *cpaInstances);
+CpaStatus cpaGetInstances(
+    const CpaAccelerationServiceType accelerationServiceType,
+    Cpa16U numInstances,
+    CpaInstanceHandle *cpaInstances);
 
 /**
  *****************************************************************************
-  * @ingroup cpa
+ * @ingroup cpa
  *      Instance Allocation Policies
  * @description
  *      Enumeration of the possible instance allocation policies that may be
@@ -920,11 +953,9 @@ typedef enum _CpaInstanceAllocPolicy
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaAllocInstance(
-        const CpaAccelerationServiceType serviceType,
-        const CpaInstanceAllocPolicy policy,
-        CpaInstanceHandle *pInstanceHandle);
+CpaStatus cpaAllocInstance(const CpaAccelerationServiceType serviceType,
+                           const CpaInstanceAllocPolicy policy,
+                           CpaInstanceHandle *pInstanceHandle);
 
 /**
  *****************************************************************************
@@ -962,8 +993,7 @@ cpaAllocInstance(
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaFreeInstance(CpaInstanceHandle instanceHandle);
+CpaStatus cpaFreeInstance(CpaInstanceHandle instanceHandle);
 
 #ifdef __cplusplus
 } /* close the extern "C" { */

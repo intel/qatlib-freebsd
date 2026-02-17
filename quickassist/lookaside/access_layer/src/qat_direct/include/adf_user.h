@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 #ifndef ADF_USER_H
@@ -133,6 +81,13 @@ struct adf_dev_miscellaneous_stats
 {
     uint64_t misc_counter;
 };
+
+struct adf_pci_address
+{
+    unsigned char bus;
+    unsigned char dev;
+    unsigned char func;
+} __packed;
 
 struct adf_dev_status_info
 {
@@ -222,12 +177,34 @@ struct adf_user_reserve_ring
 struct adf_user_section_data
 {
     char name[ADF_CFG_MAX_PROCESS_LEN];
-    u32 device_id;
-    u8 is_section_present;
+    uint32_t device_id;
+    uint8_t is_section_present;
 };
 
 int32_t adf_init_devices(void);
 CpaStatus adf_proxy_get_devices(void);
 int32_t adf_cleanup_devices(void);
+
+#ifdef QAT_DBG
+
+#define QATD_CMD_BSF_TO_ID (7)
+#define QATD_CMD_ID_TO_BSF (8)
+
+struct qatd_ioctl_bsf2id_req
+{
+    int domain;
+    unsigned short bus;
+    unsigned short dev;
+    unsigned char func;
+    int request_result;
+    unsigned int device_id;
+};
+
+#define IOCTL_QATD_BSF_TO_ID                                                   \
+    _IOWR(QATD_MAGIC, QATD_CMD_BSF_TO_ID, struct qatd_ioctl_bsf2id_req)
+#define IOCTL_QATD_ID_TO_BSF                                                   \
+    _IOWR(QATD_MAGIC, QATD_CMD_ID_TO_BSF, struct qatd_ioctl_bsf2id_req)
+
+#endif
 
 #endif /* end of include guard: ADF_USER_H */

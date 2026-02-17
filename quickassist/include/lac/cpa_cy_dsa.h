@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -143,7 +91,8 @@ extern "C" {
  *      cpaCyDsaGenPParam()
  *
  *****************************************************************************/
-typedef struct _CpaCyDsaPParamGenOpData {
+typedef struct _CpaCyDsaPParamGenOpData
+{
     CpaFlatBuffer X;
     /**< 2^(L-1) <= X < 2^L (from FIPS 186-3) */
     CpaFlatBuffer Q;
@@ -177,7 +126,8 @@ typedef struct _CpaCyDsaPParamGenOpData {
  *      cpaCyDsaGenGParam()
  *
  *****************************************************************************/
-typedef struct _CpaCyDsaGParamGenOpData {
+typedef struct _CpaCyDsaGParamGenOpData
+{
     CpaFlatBuffer P;
     /**< DSA group parameter p */
     CpaFlatBuffer Q;
@@ -213,7 +163,8 @@ typedef struct _CpaCyDsaGParamGenOpData {
  *      cpaCyDsaGenYParam()
  *
  *****************************************************************************/
-typedef struct _CpaCyDsaYParamGenOpData {
+typedef struct _CpaCyDsaYParamGenOpData
+{
     CpaFlatBuffer P;
     /**< DSA group parameter p */
     CpaFlatBuffer G;
@@ -249,7 +200,8 @@ typedef struct _CpaCyDsaYParamGenOpData {
  *      cpaCyDsaSignR()
  *
  *****************************************************************************/
-typedef struct _CpaCyDsaRSignOpData {
+typedef struct _CpaCyDsaRSignOpData
+{
     CpaFlatBuffer P;
     /**< DSA group parameter p */
     CpaFlatBuffer Q;
@@ -287,7 +239,8 @@ typedef struct _CpaCyDsaRSignOpData {
  *      cpaCyDsaSignS()
  *
  *****************************************************************************/
-typedef struct _CpaCyDsaSSignOpData {
+typedef struct _CpaCyDsaSSignOpData
+{
     CpaFlatBuffer Q;
     /**< DSA group parameter q */
     CpaFlatBuffer X;
@@ -331,7 +284,8 @@ typedef struct _CpaCyDsaSSignOpData {
  *      cpaCyDsaSignRS()
  *
  *****************************************************************************/
-typedef struct _CpaCyDsaRSSignOpData {
+typedef struct _CpaCyDsaRSSignOpData
+{
     CpaFlatBuffer P;
     /**< DSA group parameter p */
     CpaFlatBuffer Q;
@@ -377,7 +331,8 @@ typedef struct _CpaCyDsaRSSignOpData {
  *      cpaCyDsaVerify()
  *
  *****************************************************************************/
-typedef struct _CpaCyDsaVerifyOpData {
+typedef struct _CpaCyDsaVerifyOpData
+{
     CpaFlatBuffer P;
     /**< DSA group parameter p */
     CpaFlatBuffer Q;
@@ -410,7 +365,8 @@ typedef struct _CpaCyDsaVerifyOpData {
  *      operations. Statistics are set to zero when the component is
  *      initialized, and are collected per instance.
  ****************************************************************************/
-typedef struct _CpaCyDsaStats {
+typedef struct _CpaCyDsaStats
+{
     Cpa32U numDsaPParamGenRequests;
     /**< Total number of successful DSA P parameter generation requests. */
     Cpa32U numDsaPParamGenRequestErrors;
@@ -504,7 +460,8 @@ typedef struct _CpaCyDsaStats {
  *      Statistics are set to zero when the component is
  *      initialized, and are collected per instance.
  ****************************************************************************/
-typedef struct _CpaCyDsaStats64 {
+typedef struct _CpaCyDsaStats64
+{
     Cpa64U numDsaPParamGenRequests;
     /**< Total number of successful DSA P parameter generation requests. */
     Cpa64U numDsaPParamGenRequestErrors;
@@ -635,10 +592,10 @@ typedef struct _CpaCyDsaStats64 {
  *
  *****************************************************************************/
 typedef void (*CpaCyDsaGenCbFunc)(void *pCallbackTag,
-        CpaStatus status,
-        void *pOpData,
-        CpaBoolean protocolStatus,
-        CpaFlatBuffer *pOut);
+                                  CpaStatus status,
+                                  void *pOpData,
+                                  CpaBoolean protocolStatus,
+                                  CpaFlatBuffer *pOut);
 
 /**
  *****************************************************************************
@@ -686,11 +643,11 @@ typedef void (*CpaCyDsaGenCbFunc)(void *pCallbackTag,
  *
  *****************************************************************************/
 typedef void (*CpaCyDsaRSSignCbFunc)(void *pCallbackTag,
-        CpaStatus status,
-        void *pOpData,
-        CpaBoolean protocolStatus,
-        CpaFlatBuffer *pR,
-        CpaFlatBuffer *pS);
+                                     CpaStatus status,
+                                     void *pOpData,
+                                     CpaBoolean protocolStatus,
+                                     CpaFlatBuffer *pR,
+                                     CpaFlatBuffer *pS);
 
 /**
  *****************************************************************************
@@ -733,9 +690,9 @@ typedef void (*CpaCyDsaRSSignCbFunc)(void *pCallbackTag,
  *
  *****************************************************************************/
 typedef void (*CpaCyDsaVerifyCbFunc)(void *pCallbackTag,
-        CpaStatus status,
-        void *pOpData,
-        CpaBoolean verifyStatus);
+                                     CpaStatus status,
+                                     void *pOpData,
+                                     CpaBoolean verifyStatus);
 
 /**
  *****************************************************************************
@@ -823,13 +780,12 @@ typedef void (*CpaCyDsaVerifyCbFunc)(void *pCallbackTag,
  *      CpaCyDsaGenCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyDsaGenPParam(const CpaInstanceHandle instanceHandle,
-        const CpaCyDsaGenCbFunc pCb,
-        void * pCallbackTag,
-        const CpaCyDsaPParamGenOpData *pOpData,
-        CpaBoolean *pProtocolStatus,
-        CpaFlatBuffer *pP);
+CpaStatus cpaCyDsaGenPParam(const CpaInstanceHandle instanceHandle,
+                            const CpaCyDsaGenCbFunc pCb,
+                            void *pCallbackTag,
+                            const CpaCyDsaPParamGenOpData *pOpData,
+                            CpaBoolean *pProtocolStatus,
+                            CpaFlatBuffer *pP);
 
 /**
  *****************************************************************************
@@ -912,13 +868,12 @@ cpaCyDsaGenPParam(const CpaInstanceHandle instanceHandle,
  *      CpaCyDsaGenCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyDsaGenGParam(const CpaInstanceHandle instanceHandle,
-        const CpaCyDsaGenCbFunc pCb,
-        void *pCallbackTag,
-        const CpaCyDsaGParamGenOpData *pOpData,
-        CpaBoolean *pProtocolStatus,
-        CpaFlatBuffer *pG);
+CpaStatus cpaCyDsaGenGParam(const CpaInstanceHandle instanceHandle,
+                            const CpaCyDsaGenCbFunc pCb,
+                            void *pCallbackTag,
+                            const CpaCyDsaGParamGenOpData *pOpData,
+                            CpaBoolean *pProtocolStatus,
+                            CpaFlatBuffer *pG);
 
 /**
  *****************************************************************************
@@ -987,13 +942,12 @@ cpaCyDsaGenGParam(const CpaInstanceHandle instanceHandle,
  *      CpaCyDsaGenCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyDsaGenYParam(const CpaInstanceHandle instanceHandle,
-        const CpaCyDsaGenCbFunc pCb,
-        void *pCallbackTag,
-        const CpaCyDsaYParamGenOpData *pOpData,
-        CpaBoolean *pProtocolStatus,
-        CpaFlatBuffer *pY);
+CpaStatus cpaCyDsaGenYParam(const CpaInstanceHandle instanceHandle,
+                            const CpaCyDsaGenCbFunc pCb,
+                            void *pCallbackTag,
+                            const CpaCyDsaYParamGenOpData *pOpData,
+                            CpaBoolean *pProtocolStatus,
+                            CpaFlatBuffer *pY);
 
 /**
  *****************************************************************************
@@ -1076,13 +1030,12 @@ cpaCyDsaGenYParam(const CpaInstanceHandle instanceHandle,
  *      cpaCyDsaSignRS()
  *
  *****************************************************************************/
-CpaStatus
-cpaCyDsaSignR(const CpaInstanceHandle instanceHandle,
-        const CpaCyDsaGenCbFunc pCb,
-        void *pCallbackTag,
-        const CpaCyDsaRSignOpData *pOpData,
-        CpaBoolean *pProtocolStatus,
-        CpaFlatBuffer *pR);
+CpaStatus cpaCyDsaSignR(const CpaInstanceHandle instanceHandle,
+                        const CpaCyDsaGenCbFunc pCb,
+                        void *pCallbackTag,
+                        const CpaCyDsaRSignOpData *pOpData,
+                        CpaBoolean *pProtocolStatus,
+                        CpaFlatBuffer *pR);
 
 /**
  *****************************************************************************
@@ -1167,13 +1120,12 @@ cpaCyDsaSignR(const CpaInstanceHandle instanceHandle,
  *      cpaCyDsaSignRS()
  *
  *****************************************************************************/
-CpaStatus
-cpaCyDsaSignS(const CpaInstanceHandle instanceHandle,
-        const CpaCyDsaGenCbFunc pCb,
-        void *pCallbackTag,
-        const CpaCyDsaSSignOpData *pOpData,
-        CpaBoolean *pProtocolStatus,
-        CpaFlatBuffer *pS);
+CpaStatus cpaCyDsaSignS(const CpaInstanceHandle instanceHandle,
+                        const CpaCyDsaGenCbFunc pCb,
+                        void *pCallbackTag,
+                        const CpaCyDsaSSignOpData *pOpData,
+                        CpaBoolean *pProtocolStatus,
+                        CpaFlatBuffer *pS);
 
 /**
  *****************************************************************************
@@ -1257,14 +1209,13 @@ cpaCyDsaSignS(const CpaInstanceHandle instanceHandle,
  *      cpaCyDsaSignS()
  *
  *****************************************************************************/
-CpaStatus
-cpaCyDsaSignRS(const CpaInstanceHandle instanceHandle,
-        const CpaCyDsaRSSignCbFunc pCb,
-        void *pCallbackTag,
-        const CpaCyDsaRSSignOpData *pOpData,
-        CpaBoolean *pProtocolStatus,
-        CpaFlatBuffer *pR,
-        CpaFlatBuffer *pS);
+CpaStatus cpaCyDsaSignRS(const CpaInstanceHandle instanceHandle,
+                         const CpaCyDsaRSSignCbFunc pCb,
+                         void *pCallbackTag,
+                         const CpaCyDsaRSSignOpData *pOpData,
+                         CpaBoolean *pProtocolStatus,
+                         CpaFlatBuffer *pR,
+                         CpaFlatBuffer *pS);
 
 /**
  *****************************************************************************
@@ -1337,12 +1288,11 @@ cpaCyDsaSignRS(const CpaInstanceHandle instanceHandle,
  *      CpaCyDsaVerifyCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyDsaVerify(const CpaInstanceHandle instanceHandle,
-        const CpaCyDsaVerifyCbFunc pCb,
-        void *pCallbackTag,
-        const CpaCyDsaVerifyOpData *pOpData,
-        CpaBoolean *pVerifyStatus);
+CpaStatus cpaCyDsaVerify(const CpaInstanceHandle instanceHandle,
+                         const CpaCyDsaVerifyCbFunc pCb,
+                         void *pCallbackTag,
+                         const CpaCyDsaVerifyOpData *pOpData,
+                         CpaBoolean *pVerifyStatus);
 
 /**
  *****************************************************************************
@@ -1402,7 +1352,7 @@ cpaCyDsaVerify(const CpaInstanceHandle instanceHandle,
  *****************************************************************************/
 CpaStatus CPA_DEPRECATED
 cpaCyDsaQueryStats(const CpaInstanceHandle instanceHandle,
-        struct _CpaCyDsaStats *pDsaStats);
+                   struct _CpaCyDsaStats *pDsaStats);
 
 /**
  *****************************************************************************
@@ -1456,9 +1406,8 @@ cpaCyDsaQueryStats(const CpaInstanceHandle instanceHandle,
  * @see
  *      CpaCyDsaStats
  *****************************************************************************/
-CpaStatus
-cpaCyDsaQueryStats64(const CpaInstanceHandle instanceHandle,
-        CpaCyDsaStats64 *pDsaStats);
+CpaStatus cpaCyDsaQueryStats64(const CpaInstanceHandle instanceHandle,
+                               CpaCyDsaStats64 *pDsaStats);
 
 /*****************************************************************************/
 

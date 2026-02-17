@@ -1,62 +1,10 @@
 #################################################################
 #
-# This file is provided under a dual BSD/GPLv2 license.  When using or
-#   redistributing this file, you may do so under either license.
+#   SPDX-License-Identifier: BSD-3-Clause
+#   Copyright(c) 2007-2026 Intel Corporation
 # 
-#   GPL LICENSE SUMMARY
-# 
-#   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
-# 
-#   This program is free software; you can redistribute it and/or modify
-#   it under the terms of version 2 of the GNU General Public License as
-#   published by the Free Software Foundation.
-# 
-#   This program is distributed in the hope that it will be useful, but
-#   WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#   General Public License for more details.
-# 
-#   You should have received a copy of the GNU General Public License
-#   along with this program; if not, write to the Free Software
-#   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
-#   The full GNU General Public License is included in this distribution
-#   in the file called LICENSE.GPL.
-# 
-#   Contact Information:
-#   Intel Corporation
-# 
-#   BSD LICENSE
-# 
-#   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
-#   All rights reserved.
-# 
-#   Redistribution and use in source and binary forms, with or without
-#   modification, are permitted provided that the following conditions
-#   are met:
-# 
-#     * Redistributions of source code must retain the above copyright
-#       notice, this list of conditions and the following disclaimer.
-#     * Redistributions in binary form must reproduce the above copyright
-#       notice, this list of conditions and the following disclaimer in
-#       the documentation and/or other materials provided with the
-#       distribution.
-#     * Neither the name of Intel Corporation nor the names of its
-#       contributors may be used to endorse or promote products derived
-#       from this software without specific prior written permission.
-# 
-#   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-#   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-#   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-#   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-#   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-#   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-#   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-#   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-#   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-#   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-#   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-# 
-# 
+#   These contents may have been developed with support from one or more
+#   Intel-operated generative artificial intelligence solutions.
 #
 #################################################################
 
@@ -117,6 +65,7 @@ libadf_la_CFLAGS = -I$(srcdir)/quickassist/utilities/libusdm_drv \
 lib_LTLIBRARIES = lib@LIBUSDMNAME@.la
 lib@LIBUSDMNAME@_la_SOURCES = \
         quickassist/utilities/libusdm_drv/user_space/qae_mem_utils_common.c \
+        quickassist/utilities/libusdm_drv/user_space/qae_mem_common.c \
         quickassist/utilities/libusdm_drv/user_space/uio/qae_mem_utils_uio.c \
         quickassist/utilities/libusdm_drv/user_space/uio/qae_mem_hugepage_utils_uio.c
 lib@LIBUSDMNAME@_la_CFLAGS = -I$(srcdir)/quickassist/utilities/libusdm_drv \
@@ -133,12 +82,12 @@ libcrc_SOURCES_DIR = quickassist/lookaside/access_layer/src/common/compression/
 crc64_ecma_norm_by8.lo:
 	@echo "  CCAS     $(libcrc_SOURCES_DIR)$@"
 	@$(LIBTOOL) --mode=compile --quiet \
-	yasm -f x64 -f elf64 -X gnu -g dwarf2 $(libcrc_SOURCES_DIR)$(@:.lo=.S) -I$(libcrc_SOURCES_DIR) -o $@ -prefer-non-pic
+	nasm -f elf64 -X gnu $(libcrc_SOURCES_DIR)$(@:.lo=.S) -I$(libcrc_SOURCES_DIR) -o $@ -prefer-non-pic
 
 crc32_gzip_refl_by8.lo:
 	@echo "  CCAS     $(libcrc_SOURCES_DIR)$@"
 	@$(LIBTOOL) --mode=compile --quiet \
-	yasm -f x64 -f elf64 -X gnu -g dwarf2 $(libcrc_SOURCES_DIR)$(@:.lo=.S) -I$(libcrc_SOURCES_DIR) -o $@ -prefer-non-pic
+	nasm -f elf64 -X gnu $(libcrc_SOURCES_DIR)$(@:.lo=.S) -I$(libcrc_SOURCES_DIR) -o $@ -prefer-non-pic
 
 export CMN_ROOT=$(abs_srcdir)/quickassist/utilities/libusdm_drv
 SUBDIRS = quickassist/utilities/libusdm_drv/freebsd/kernel_space
@@ -225,7 +174,10 @@ lib@LIBQATNAME@_la_SOURCES = \
 	quickassist/lookaside/access_layer/src/common/utils/sal_versions.c \
 	quickassist/lookaside/access_layer/src/device/dev_info.c \
 	quickassist/lookaside/access_layer/src/user/sal_user.c \
-	quickassist/lookaside/access_layer/src/user/sal_user_dyn_instance.c
+	quickassist/lookaside/access_layer/src/user/sal_user_dyn_instance.c \
+	quickassist/lookaside/access_layer/src/user/sal_user_du.c \
+	quickassist/lookaside/access_layer/src/user/sal_user_tl.c
+
 lib@LIBQATNAME@_la_CFLAGS = -I$(srcdir)/quickassist/utilities/libusdm_drv \
 			    -I$(srcdir)/quickassist/utilities/osal/include \
 			    -I$(srcdir)/quickassist/utilities/osal/src/$(ICP_OS)/user_space/include \
@@ -250,6 +202,44 @@ lib@LIBQATNAME@_la_LIBADD += crc32_gzip_refl_by8.lo crc64_ecma_norm_by8.lo
 lib@LIBQATNAME@_la_LDFLAGS = -version-info $(LIBQAT_VERSION) \
 			     $(COMMON_LDFLAGS) \
 			     -export-symbols-regex '^(cpa|icp_sal)'
+
+pkgincludedir = $(includedir)/qat
+pkginclude_HEADERS = \
+	quickassist/include/cpa.h \
+	quickassist/include/cpa_dev.h \
+	quickassist/include/cpa_types.h \
+	quickassist/include/lac/cpa_cy_common.h \
+	quickassist/include/lac/cpa_cy_dh.h \
+	quickassist/include/lac/cpa_cy_drbg.h \
+	quickassist/include/lac/cpa_cy_dsa.h \
+	quickassist/include/lac/cpa_cy_ecdh.h \
+	quickassist/include/lac/cpa_cy_ecdsa.h \
+	quickassist/include/lac/cpa_cy_ecsm2.h \
+	quickassist/include/lac/cpa_cy_ec.h \
+	quickassist/include/lac/cpa_cy_im.h \
+	quickassist/include/lac/cpa_cy_key.h \
+	quickassist/include/lac/cpa_cy_kpt.h \
+	quickassist/include/lac/cpa_cy_ln.h \
+	quickassist/include/lac/cpa_cy_nrbg.h \
+	quickassist/include/lac/cpa_cy_prime.h \
+	quickassist/include/lac/cpa_cy_rsa.h \
+	quickassist/include/lac/cpa_cy_sym_dp.h \
+	quickassist/include/lac/cpa_cy_sym.h \
+	quickassist/include/dc/cpa_dc.h \
+	quickassist/include/dc/cpa_dc_dp.h \
+	quickassist/include/dc/cpa_dc_chain.h \
+	quickassist/lookaside/access_layer/include/icp_buffer_desc.h \
+	quickassist/lookaside/access_layer/include/icp_sal_congestion_mgmt.h \
+	quickassist/lookaside/access_layer/include/icp_sal_poll.h \
+	quickassist/lookaside/access_layer/include/icp_sal_user.h \
+	quickassist/lookaside/access_layer/include/icp_sal.h \
+	quickassist/lookaside/access_layer/include/icp_sal_dev_versions.h \
+	quickassist/lookaside/access_layer/include/icp_sal_versions.h \
+	quickassist/lookaside/access_layer/include/icp_sal_dc_error_simulation.h \
+	quickassist/lookaside/access_layer/include/icp_sal_hb_fail_simulation.h \
+	quickassist/lookaside/access_layer/include/icp_sal_iommu.h \
+	quickassist/lookaside/access_layer/include/icp_sal_ring_exception_simulation.h \
+	quickassist/utilities/libusdm_drv/qae_mem.h
 
 EXTRA_DIST = LICENSE \
 	autogen.sh \

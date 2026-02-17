@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -120,6 +68,11 @@ extern volatile CpaBoolean backoff_dynamic_g;
 extern uint32_t backoff_static_timer_g;
 extern CpaInstanceHandle *cyInstances_g;
 
+CpaStatus setSymPollingInterval(Cpa64U pollingInterval);
+CpaStatus printDigestAppend(CpaBoolean flag);
+CpaStatus printSymPollingInterval(void);
+void sampleSymmetricDpPerformance(single_thread_test_data_t *testSetup);
+
 /*****************************************************************************
  *
  *  Internal Function Interfaces
@@ -172,22 +125,33 @@ EXPORT_SYMBOL(printSymPollingInterval);
  * @description
  * Poll the number of DP operations
  * ***************************************************************************/
-CpaStatus cyDpPollNumOperations(perf_data_t *pPerfData,
-                                CpaInstanceHandle instanceHandle,
-                                Cpa64U numOperations)
+static CpaStatus cyDpPollNumOperations(perf_data_t *pPerfData,
+                                       CpaInstanceHandle instanceHandle,
+                                       Cpa64U numOperations)
 {
     CpaStatus status = CPA_STATUS_FAIL;
 
     perf_cycles_t startCycles = 0, totalCycles = 0;
+    CpaInstanceInfo2 info2 = { 0 };
     Cpa32U freq = sampleCodeGetCpuFreq();
     startCycles = sampleCodeTimestamp();
+    status = cpaCyInstanceGetInfo2(instanceHandle, &info2);
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("cpaCyInstanceGetInfo2 failed. (status = %d)\n", status);
+        return CPA_STATUS_FAIL;
+    }
+
     while (pPerfData->responses != numOperations)
     {
-        coo_poll_dp_cy(pPerfData, instanceHandle, &status);
-        if (CPA_STATUS_FAIL == status)
+        if (CPA_TRUE == info2.isPolled)
         {
-            PRINT_ERR("Error polling instance\n");
-            return CPA_STATUS_FAIL;
+            coo_poll_dp_cy(pPerfData, instanceHandle, &status);
+            if (CPA_STATUS_FAIL == status)
+            {
+                PRINT_ERR("Error polling instance\n");
+                return CPA_STATUS_FAIL;
+            }
         }
         if (CPA_STATUS_RETRY == status)
         {
@@ -328,6 +292,8 @@ static void symDpSetDigestBuffer(Cpa32U messageLenToCipherInBytes,
     {
         pDigestResult = (Cpa8U *)(pBufferList->pBuffers[0].pData +
                                   messageLenToCipherInBytes);
+        /* reset the digest memory to 0 */
+        memset((void *)pDigestResult, value, digestLengthInBytes);
     }
     else
     {
@@ -337,22 +303,20 @@ static void symDpSetDigestBuffer(Cpa32U messageLenToCipherInBytes,
         pDigestResult =
             (Cpa8U *)(pBufferList->pBuffers[indexBuffer].pData +
                       (messageLenToCipherInBytes % bufferSizeInByte));
-    }
-
-    /* reset the digest memory to 0 */
-
-    memset(
-        (void *)pDigestResult,
-        value,
-        (pBufferList->pBuffers[0].dataLenInBytes -
-         messageLenToCipherInBytes % pBufferList->pBuffers[0].dataLenInBytes));
-
-    indexBuffer++;
-    for (i = indexBuffer; i < pBufferList->numBuffers; i++)
-    {
-        memset((void *)(uintptr_t)pBufferList->pBuffers[i].pData,
+        /* reset the digest memory to 0 */
+        memset((void *)pDigestResult,
                value,
-               pBufferList->pBuffers[i].dataLenInBytes);
+               (pBufferList->pBuffers[0].dataLenInBytes -
+                messageLenToCipherInBytes %
+                    pBufferList->pBuffers[0].dataLenInBytes));
+
+        indexBuffer++;
+        for (i = indexBuffer; i < pBufferList->numBuffers; i++)
+        {
+            memset((void *)(uintptr_t)pBufferList->pBuffers[i].pData,
+                   value,
+                   pBufferList->pBuffers[i].dataLenInBytes);
+        }
     }
 }
 /*****************************************************************************
@@ -411,11 +375,14 @@ static void symDpPerformMemFree(symmetric_test_params_t *setup,
      * removing the sessions */
     if (NULL != pSessionCtx)
     {
-        if (NULL != *pSessionCtx)
+        if (reliability_g)
         {
-            for (m = 0; m < setup->numSessions; m++)
+            if (NULL != *pSessionCtx)
             {
-                qaeMemFreeNUMA((void **)&pSessionCtx[m]);
+                for (m = 0; m < setup->numSessions; m++)
+                {
+                    qaeMemFreeNUMA((void **)&pSessionCtx[m]);
+                }
             }
         }
         qaeMemFree((void **)&pSessionCtx);
@@ -457,9 +424,9 @@ static void symDpPerformMemFree(symmetric_test_params_t *setup,
  *      When the number of response is equal to the number of operations,
  *      it will release one semaphore for async operation.
  *****************************************************************************/
-void symDpPerformCallback(CpaCySymDpOpData *pOpData,
-                          CpaStatus status,
-                          CpaBoolean verifyResult)
+static void symDpPerformCallback(CpaCySymDpOpData *pOpData,
+                                 CpaStatus status,
+                                 CpaBoolean verifyResult)
 {
     /* pCallbacktag in the pOpData structure is used to store
      * index of to the perf_data_t associated the thread
@@ -578,7 +545,7 @@ static CpaStatus symmetricDpSetupSession(CpaCySymDpCbFunc pSymCb,
 )
 {
     Cpa32U sessionCtxSizeInBytes = 0;
-#if CPA_CY_API_VERSION_NUM_MINOR >= 8
+#if CPA_CY_API_VERSION_AT_LEAST(1, 8)
     Cpa32U sessionCtxDynamicSizeInBytes = 0;
 #endif
     CpaStatus status = CPA_STATUS_SUCCESS;
@@ -653,7 +620,7 @@ static CpaStatus symmetricDpSetupSession(CpaCySymDpCbFunc pSymCb,
         return status;
     }
 
-#if CPA_CY_API_VERSION_NUM_MINOR >= 8
+#if CPA_CY_API_VERSION_AT_LEAST(1, 8)
     /*get dynamic context size*/
 
     status = cpaCySymDpSessionCtxGetDynamicSize(setup->cyInstanceHandle,
@@ -694,10 +661,8 @@ static CpaStatus symmetricDpSetupSession(CpaCySymDpCbFunc pSymCb,
     }
     *pSession = pLocalSession;
 
-
-#if CPA_CY_API_VERSION_NUM_MINOR >= 8
+#if CPA_CY_API_VERSION_AT_LEAST(1, 8)
 #endif
-
 
     /* Register asynchronous callback with instance handle*/
     status = cpaCySymDpRegCbFunc(setup->cyInstanceHandle, pSymCb);
@@ -727,7 +692,7 @@ static CpaStatus symmetricDpPerformOpDataSetup(
 {
     CpaStatus status = CPA_STATUS_SUCCESS;
     Cpa32U createCount = 0;
-    Cpa32U node = 0;
+    Cpa32U node = 0, ivAllocSz = 0;
 
     /*get the node we are running on for local memory allocation*/
     status = sampleCodeCyGetNode(setup->cyInstanceHandle, &node);
@@ -864,8 +829,19 @@ static CpaStatus symmetricDpPerformOpDataSetup(
             setup->setupData.cipherSetupData.cipherAlgorithm ==
                 CPA_CY_SYM_CIPHER_SM4_CTR)
         {
-            pOpdata[createCount]->ivLenInBytes =
-                IV_LEN_FOR_16_BYTE_BLOCK_CIPHER;
+            if (setup->setupData.cipherSetupData.cipherAlgorithm ==
+                    CPA_CY_SYM_CIPHER_ZUC_EEA3 &&
+                setup->setupData.cipherSetupData.cipherKeyLenInBytes ==
+                    KEY_SIZE_256_IN_BYTES)
+            {
+                pOpdata[createCount]->ivLenInBytes =
+                    IV_LEN_FOR_24_BYTE_BLOCK_CIPHER;
+            }
+            else
+            {
+                pOpdata[createCount]->ivLenInBytes =
+                    IV_LEN_FOR_16_BYTE_BLOCK_CIPHER;
+            }
             /* If 0 use default else use value passed. */
             if (0 != setup->ivLength)
             {
@@ -882,23 +858,54 @@ static CpaStatus symmetricDpPerformOpDataSetup(
                 pOpdata[createCount]->ivLenInBytes = setup->ivLength;
             }
         }
+        else if (setup->setupData.cipherSetupData.cipherAlgorithm ==
+                 CPA_CY_SYM_CIPHER_CHACHA)
+        {
+            pOpdata[createCount]->ivLenInBytes = IV_LEN_FOR_12_BYTE_CHACHA;
+            /* If 0 use default else use value passed. */
+            if (0 != setup->ivLength)
+            {
+                pOpdata[createCount]->ivLenInBytes = setup->ivLength;
+            }
+        }
+
         /*allocate NUMA aware aligned memory for IV*/
+        switch (setup->setupData.cipherSetupData.cipherAlgorithm)
+        {
+            /* As per QAT API documentation, GCM and CCM IV allocation size
+             * should be 16 bytes even if IV length is less than 16 bytes.
+             */
+            case CPA_CY_SYM_CIPHER_AES_CCM:
+            case CPA_CY_SYM_CIPHER_AES_GCM:
+            case CPA_CY_SYM_CIPHER_CHACHA:
+                ivAllocSz = IV_AES_BLOCK_SIZE;
+                break;
+            default:
+                ivAllocSz = pOpdata[createCount]->ivLenInBytes;
+        }
         pOpdata[createCount]->pIv = qaeMemAllocNUMA(
-            pOpdata[createCount]->ivLenInBytes, node, BYTE_ALIGNMENT_64);
+            ivAllocSz, node, BYTE_ALIGNMENT_64);
         if (NULL == pOpdata[createCount]->pIv)
         {
             PRINT_ERR("IV is null\n");
             dpOpDataMemFree(pOpdata, createCount);
             return CPA_STATUS_FAIL;
         }
-        memset(
-            pOpdata[createCount]->pIv, 0, pOpdata[createCount]->ivLenInBytes);
+        memset(pOpdata[createCount]->pIv, 0, ivAllocSz);
+
         if (setup->setupData.cipherSetupData.cipherAlgorithm ==
             CPA_CY_SYM_CIPHER_AES_CCM)
         {
             /*Although the IV data length for CCM must be 16 bytes,
               The nonce length must be between 7 and 13 inclusive*/
-            pOpdata[createCount]->ivLenInBytes = AES_CCM_DEFAULT_NONCE_LENGTH;
+            if (pPacketSize[createCount] < BUFFER_SIZE_65536)
+            {
+                pOpdata[createCount]->ivLenInBytes = AES_CCM_DEFAULT_NONCE_LENGTH;
+            }
+            else
+            {
+                pOpdata[createCount]->ivLenInBytes = AES_CCM_LARGE_REQUEST_NONCE_LENGTH;
+            }
         }
 
         /*if we are testing HASH or Alg Chaining, set the location to place
@@ -1047,11 +1054,11 @@ static CpaStatus symmetricDpPerformOpDataSetup(
  * The request is submitted to be performed by invoking the function
  * @ref cpaCySymDpPerformOpNow.
  * ***************************************************************************/
-CpaStatus symDpPerformEnqueueOp(symmetric_test_params_t *setup,
-                                Cpa32U numOfLoops,
-                                CpaCySymDpOpData **ppOpData,
-                                CpaBufferList **ppSrcBuffListArray,
-                                CpaCySymCipherDirection cipherDirection)
+static CpaStatus symDpPerformEnqueueOp(symmetric_test_params_t *setup,
+                                       Cpa32U numOfLoops,
+                                       CpaCySymDpOpData **ppOpData,
+                                       CpaBufferList **ppSrcBuffListArray,
+                                       CpaCySymCipherDirection cipherDirection)
 {
     CpaStatus status = CPA_STATUS_SUCCESS;
     Cpa32U outsideLoopCount = 0;
@@ -1108,7 +1115,6 @@ CpaStatus symDpPerformEnqueueOp(symmetric_test_params_t *setup,
     /*preset the number of ops we plan to submit*/
     pSymData->numOperations = (Cpa64U)setup->numBuffLists * numOfLoops;
     coo_init(pSymData, pSymData->numOperations);
-    qaeMemFree((void **)&instanceInfo);
     /* reset number of response to 0, sync sym operations within outside loop*/
     pSymData->responses = 0;
 
@@ -1128,6 +1134,8 @@ CpaStatus symDpPerformEnqueueOp(symmetric_test_params_t *setup,
         {
             PRINT_ERR("Failed to allocate memory for submission and response "
                       "times\n");
+            qaeMemFree((void **)&request_respnse_time);
+            qaeMemFree((void **)&request_submit_start);
             return CPA_STATUS_FAIL;
         }
         memset(request_submit_start, 0, request_mem_sz);
@@ -1278,7 +1286,7 @@ CpaStatus symDpPerformEnqueueOp(symmetric_test_params_t *setup,
                             /*
                              *  do nothing
                              */
-                            asm volatile("nop");
+                            __asm__ volatile("nop");
                         }
                         /*
                          * increase the backoff interval after the  unsuccessful
@@ -1308,12 +1316,15 @@ CpaStatus symDpPerformEnqueueOp(symmetric_test_params_t *setup,
                                 /*
                                  *  do nothing
                                  */
-                                asm volatile("nop");
+                                __asm__ volatile("nop");
                             }
                         }
                     }
-                    coo_poll_dp_cy(
-                        pSymData, setup->cyInstanceHandle, &pollStatus);
+                    if (CPA_TRUE == instanceInfo->isPolled)
+                    {
+                        coo_poll_dp_cy(
+                           pSymData, setup->cyInstanceHandle, &pollStatus);
+                    }
                     nextPoll = numOps + symPollingInterval_g;
                     AVOID_SOFTLOCKUP;
                 }
@@ -1357,11 +1368,15 @@ CpaStatus symDpPerformEnqueueOp(symmetric_test_params_t *setup,
                      */
                     while (pSymData->responses != submissions)
                     {
-                        /* Keep polling until compression of the buffer
-                         * completes
-                         * and dcPerformCallback() increments
-                         * perfData->responses */
-                        icp_sal_CyPollDpInstance(setup->cyInstanceHandle, 0);
+                        if (CPA_TRUE == instanceInfo->isPolled)
+                        {
+                            /* Keep polling until compression of the buffer
+                             * completes
+                             * and dcPerformCallback() increments
+                             * perfData->responses */
+                            icp_sal_CyPollDpInstance(setup->cyInstanceHandle,
+                                                     0);
+                        }
                         AVOID_SOFTLOCKUP;
                     }
                 }
@@ -1372,12 +1387,15 @@ CpaStatus symDpPerformEnqueueOp(symmetric_test_params_t *setup,
             ++numOps;
             if (numOps == nextPoll)
             {
-                coo_poll_dp_cy(pSymData, setup->cyInstanceHandle, &pollStatus);
+                if (CPA_TRUE == instanceInfo->isPolled)
+                {
+                    coo_poll_dp_cy(
+                       pSymData, setup->cyInstanceHandle, &pollStatus);
+                }
                 nextPoll = numOps + symPollingInterval_g;
             }
 
         } /* End of  inside Loop */
-
 
         /* if status != CPA_STATUS_SUCCESS, break the out loop directly */
         if (CPA_STATUS_SUCCESS != status)
@@ -1466,13 +1484,21 @@ CpaStatus symDpPerformEnqueueOp(symmetric_test_params_t *setup,
              setup->performanceStats->startCyclesTimestamp) -
             setup->performanceStats->totalBusyLoopCycles;
 
-        do_div(setup->performanceStats->offloadCycles,
-               setup->performanceStats->responses);
+        if (setup->performanceStats->responses == 0)
+        {
+            PRINT_ERR("The response count is 0\n");
+        }
+        else
+        {
+            do_div(setup->performanceStats->offloadCycles,
+                   setup->performanceStats->responses);
+        }
     }
 
     coo_average(pSymData);
     coo_deinit(pSymData);
 
+    qaeMemFree((void **)&instanceInfo);
     return status;
 }
 
@@ -1482,11 +1508,12 @@ CpaStatus symDpPerformEnqueueOp(symmetric_test_params_t *setup,
  * @description
  * Enqueue multiple requests with one operation, perform later
  * ***************************************************************************/
-CpaStatus symDpPerformEnqueueOpBatch(symmetric_test_params_t *setup,
-                                     Cpa32U numOfLoops,
-                                     CpaCySymDpOpData **ppOpData,
-                                     CpaBufferList **ppSrcBuffListArray,
-                                     CpaCySymCipherDirection cipherDirection)
+static CpaStatus symDpPerformEnqueueOpBatch(
+    symmetric_test_params_t *setup,
+    Cpa32U numOfLoops,
+    CpaCySymDpOpData **ppOpData,
+    CpaBufferList **ppSrcBuffListArray,
+    CpaCySymCipherDirection cipherDirection)
 {
     CpaStatus status = CPA_STATUS_SUCCESS;
     Cpa32U outsideLoopCount = 0;
@@ -1668,11 +1695,13 @@ CpaStatus symDpPerformEnqueueOpBatch(symmetric_test_params_t *setup,
             numOps += batchCount;
             if ((numOps >= symPollingInterval_g))
             {
-                icp_sal_CyPollDpInstance(setup->cyInstanceHandle, 0);
+                if (CPA_TRUE == instanceInfo->isPolled)
+                {
+                    icp_sal_CyPollDpInstance(setup->cyInstanceHandle, 0);
+                }
                 numOps = 0;
             }
         } /* End of  inside Loop while*/
-
 
         /* if status != CPA_STATUS_SUCCESS, break the out loop directly */
         if (CPA_STATUS_SUCCESS != status)
@@ -1732,7 +1761,6 @@ static CpaStatus performOffloadCalculation(
                                    packetSize,
                                    pPerfData->endCyclesTimestamp -
                                        pPerfData->startCyclesTimestamp);
-    currentThroughput = baseThroughput;
 
     /* Find the lower bound(retries) and upper bound(no retries) for subsequent
      * binary search.
@@ -1760,10 +1788,6 @@ static CpaStatus performOffloadCalculation(
                                                 ppSrcBuffListArray,
                                                 cipherDirection);
         }
-        currentThroughput = getThroughput(pPerfData->responses,
-                                          packetSize,
-                                          pPerfData->endCyclesTimestamp -
-                                              pPerfData->startCyclesTimestamp);
     }
 
     upperBound = pPerfData->busyLoopValue;
@@ -1810,7 +1834,8 @@ static CpaStatus performOffloadCalculation(
         /* Else retries are zero, but throughput has been affected. */
         else
         {
-            upperBound = pPerfData->busyLoopValue - 1;
+            upperBound = (pPerfData->busyLoopValue > 0) ?
+                         (pPerfData->busyLoopValue - 1) : 0;
         }
     }
     return status;
@@ -2062,7 +2087,6 @@ static CpaStatus sampleSymmetricDpPerform(symmetric_test_params_t *setup)
         return CPA_STATUS_FAIL;
     } /*End of if which symOperation == CPA_CY_SYM_OP_HASH */
 
-
     /* setup the encrypt operation data with session array, packet size array
      * the pointer of operation data structure, the pointer of setup parameter
      * the pointer of source buffer list array and the pointer of destination
@@ -2087,7 +2111,6 @@ static CpaStatus sampleSymmetricDpPerform(symmetric_test_params_t *setup)
                             totalSizeInBytes);
         return status;
     }
-
 
     /*Perform different symmetric Data Plane Operations with four functions
      *numOpDpBatch        : numRequests              : Functions
@@ -2273,12 +2296,14 @@ void sampleSymmetricDpPerformance(single_thread_test_data_t *testSetup)
         packageIdCount_g = instanceInfo->physInstId.packageId;
     }
 
+#if !defined(SC_BSD_UPSTREAM)
     if (instanceInfo->isPolled == CPA_FALSE)
     {
         PRINT("Data-Plane operations not supported on non-polled instances\n");
         symTestSetup.performanceStats->threadReturnStatus = CPA_STATUS_FAIL;
         goto exit;
     }
+#endif
 #if defined(USER_SPACE) && !defined(SC_EPOLL_DISABLED)
 
     status = icp_sal_CyGetFileDescriptor(symTestSetup.cyInstanceHandle, &fd);
@@ -2373,8 +2398,9 @@ void sampleSymmetricDpPerformance(single_thread_test_data_t *testSetup)
               testSetup->threadID);
         testSetup->statsPrintFunc =
             (stats_print_func_t)printSymmetricPerfDataAndStopCyService;
-        symTestSetup.performanceStats->threadReturnStatus = CPA_STATUS_FAIL;
-        error_flag_g = CPA_TRUE;
+        symTestSetup.performanceStats->threadReturnStatus =
+            CPA_STATUS_UNSUPPORTED;
+        error_flag_g = CPA_FALSE;
         sampleCodeBarrier();
         symTestSetup.packetSizeInBytesArray = NULL;
         goto exit;
@@ -2542,6 +2568,17 @@ CpaStatus setupSymmetricDpTest(
         symmetricSetup->setupData.hashSetupData.digestResultLenInBytes = 16;
     }
 
+    if (CPA_STATUS_SUCCESS == checkForChachapolySupport())
+    {
+        /* Always run AES-GCM/GMAC algchain  with single pass mode */
+        if ((CPA_CY_SYM_CIPHER_AES_GCM == cipherAlg) &&
+            (CPA_CY_SYM_HASH_AES_GCM == hashAlg ||
+             CPA_CY_SYM_HASH_AES_GMAC == hashAlg) &&
+            CPA_CY_SYM_OP_ALGORITHM_CHAINING == opType)
+        {
+            symmetricSetup->ivLength = CPA_CIPHER_SPC_IV_SIZE;
+        }
+    }
 
     if (((hashAlg == CPA_CY_SYM_HASH_KASUMI_F9) ||
          (hashAlg == CPA_CY_SYM_HASH_SNOW3G_UIA2)) &&

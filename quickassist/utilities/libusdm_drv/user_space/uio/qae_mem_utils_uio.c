@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 /**
@@ -69,9 +17,12 @@
  * user space for use by the  quick assist sample code
  *
  ***************************************************************************/
-#include "qae_page_table_uio.h"
 #include "qae_mem_utils_common.h"
-
+#ifdef ICP_THREAD_SPECIFIC_USDM
+#include "qae_mem_multi_thread.h"
+#else
+#include "qae_mem_lib_utils.h"
+#endif
 /**************************************************************************
                                    macro
 **************************************************************************/
@@ -83,6 +34,10 @@
 int g_fd = -1;
 #ifndef ICP_THREAD_SPECIFIC_USDM
 int g_strict_node = 1;
+#endif
+
+#ifdef CACHE_PID
+void *cache_pid = NULL;
 #endif
 
 /**************************************************************************
@@ -111,35 +66,42 @@ void __qae_finish_free_slab(const int fd, dev_mem_info_t *slab)
     }
 }
 
-#ifndef ICP_THREAD_SPECIFIC_USDM
 /**************************************
  * Memory functions
  *************************************/
 static inline int qaeOpenFd(void)
 {
-/* Check if it is a new process or child. */
-#ifdef CACHE_PID
-    const int is_new_pid =
-        cache_pid == NULL || (cache_pid != NULL && *((pid_t *)cache_pid) == 0);
-#else
-    const int is_new_pid = check_pid();
-#endif
 
-    if (g_fd < 0 || is_new_pid)
+    if (g_fd < 0 || is_new_process())
     {
+#ifndef ICP_THREAD_SPECIFIC_USDM
         __qae_ResetControl();
-
+#else
+        free_page_table_fptr(&g_page_table);
+        memset(&g_page_table, 0, sizeof(g_page_table));
+#endif
         CMD_DEBUG("%s:%d Memory file handle is not initialized. "
-                  "Initializing it now \n",
+                  "Initializing it now\n",
                   __func__,
                   __LINE__);
 
+        /* if the code flow comes here with the reason that
+         * it is a new process, then close the fd, if any,
+         * that doesn't belong to the new process!
+         */
         if (g_fd > 0)
+        {
+            CMD_DEBUG("%s:%d Closing the file handle that doesn't "
+                      "belong to the process\n",
+                      __func__,
+                      __LINE__);
             close(g_fd);
+        }
+
         g_fd = qae_open(QAE_MEM, O_RDWR);
         if (g_fd < 0)
         {
-            CMD_ERROR("%s:%d Unable to initialize memory file handle %s \n",
+            CMD_ERROR("%s:%d Unable to initialize memory file handle %s\n",
                       __func__,
                       __LINE__,
                       QAE_MEM);
@@ -147,44 +109,13 @@ static inline int qaeOpenFd(void)
         }
 
 #ifdef CACHE_PID
-        /* Cache pid */
-        if (!cache_pid)
-        {
-            int page_size = getpagesize();
-
-            cache_pid = qae_mmap(NULL,
-                                 page_size,
-                                 PROT_READ | PROT_WRITE,
-                                 MAP_PRIVATE | MAP_ANON,
-                                 -1,
-                                 0);
-            if (cache_pid == NULL)
-            {
-                CMD_ERROR("%s:%d Unable to mmap aligned memory \n",
-                          __func__,
-                          __LINE__);
-                close(g_fd);
-                return -ENOMEM;
-            }
-
-            if (qae_minherit(cache_pid, page_size, INHERIT_ZERO))
-            {
-                CMD_ERROR("%s:%d Unable to update page properties\n",
-                          __func__,
-                          __LINE__);
-                qae_munmap(cache_pid, page_size);
-                cache_pid = NULL;
-                close(g_fd);
-                g_fd = -1;
-                return -ENOMEM;
-            }
-        }
-
-        *((pid_t *)cache_pid) = getpid();
+        cache_process_id();
 #endif
-
         if (__qae_init_hugepages(g_fd))
+        {
+            close(g_fd);
             return -EIO;
+        }
     }
     return 0;
 }
@@ -208,10 +139,14 @@ int qaeMemInitAndReturnFd(int *mem_fd)
     return status;
 }
 
-
 int __qae_free_special(void)
 {
     int ret = 0;
+
+#ifdef CACHE_PID
+    uncache_process_id();
+#endif
+
     /* Send ioctl to kernel space to remove block for this pid */
     if (g_fd > 0)
     {
@@ -229,7 +164,6 @@ int __qae_free_special(void)
 
     return ret;
 }
-#endif
 
 static inline void *mmap_phy_addr(const int fd,
                                   const uint64_t phy_addr,
@@ -457,3 +391,35 @@ dev_mem_info_t *__qae_alloc_slab(const int fd,
     return slab;
 }
 #endif
+
+/*
+ * qaeMemMapContiguousIova - UIO stub implementation
+ *
+ * This API is only supported in VFIO mode. In UIO mode, it returns 0
+ * to indicate failure since UIO does not support IOMMU-based IOVA mapping.
+ */
+uint64_t qaeMemMapContiguousIova(void *virt, size_t size)
+{
+    UNUSED(virt);
+    UNUSED(size);
+
+    CMD_DEBUG("%s:%d is not supported in this mode.\n", __func__, __LINE__);
+
+    return 0;
+}
+
+/*
+ * qaeMemUnmapContiguousIova - UIO stub implementation
+ *
+ * This API is only supported in VFIO mode. In UIO mode, it returns 1
+ * to indicate failure since UIO does not support IOMMU-based IOVA mapping.
+ */
+int qaeMemUnmapContiguousIova(void *virt, size_t size)
+{
+    UNUSED(virt);
+    UNUSED(size);
+
+    CMD_DEBUG("%s:%d is not supported in this mode.\n", __func__, __LINE__);
+
+    return 1;
+}

@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 /**
@@ -171,6 +119,26 @@ typedef struct dev_mem_info_s
         struct dev_mem_info_s *pNext_user_hash; /* user space only */
         uint64_t padding_nextuh;
     };
+#ifdef IO_VFIO
+#ifdef ICP_THREAD_SPECIFIC_USDM
+    /* These pointers are required for adding and deleting slabs
+     * to/from TMP list. We cannot rely on existing pointers
+     * because those are actually being filled with relevant
+     * addresses given the slab was added to another lists.
+     * Please see ADD_ELEMENT_TO_END_LIST, ADD_ELEMENT_TO_END_LIST
+     * in usdm/include/qae_mem_utils.h
+     */
+    union {
+        struct dev_mem_info_s *pPrev_user_vfiotmp; /* user space only */
+        uint64_t padding_prevuvfio;
+    };
+    union {
+        struct dev_mem_info_s *pNext_user_vfiotmp; /* user space only */
+        uint64_t padding_nextuvfio;
+    };
+    uint32_t flag_pinned; /* required while using TMP list */
+#endif                    /* ICP_THREAD_SPECIFIC_USDM */
+#endif                    /* IO_VFIO */
 } dev_mem_info_t;
 
 typedef struct user_page_info_s
@@ -665,17 +633,22 @@ void printMemAllocations(void);
 
 #define mem_ioctl(fd, cmd, pMemInfo) ioctl(fd, cmd, pMemInfo)
 #define qae_open(file, options) open(file, options)
+#define qae_close(fd) close(fd)
 #define qae_lseek(fd, offset, whence) lseek(fd, offset, whence)
 #define qae_read(fd, buf, nbytes) read(fd, buf, nbytes)
 #define qae_mmap(addr, length, prot, flags, fd, offset)                        \
     mmap(addr, length, prot, flags, fd, offset)
 #define qae_munmap(addr, length) munmap(addr, length)
 #define qae_madvise(addr, len, advice) madvise(addr, len, advice)
+#define qae_fopen(filename, operation) fopen(filename, operation)
+#define qae_fgets(str, n, stream) fgets(str, n, stream)
+#define qae_opendir(dirname) opendir(dirname)
 #define qae_minherit(addr, len, inherit) minherit(addr, len, inherit)
 #define qae_mkstemp(template) mkstemp(template)
 #endif
 
 #if defined(__KERNEL__)
+int handle_other_ioctls(uint32_t cmd);
 #if defined(ICP_ADF_IOMMU)
 int icp_adf_iommu_map(void *iova, void *phaddr, size_t size);
 int icp_adf_iommu_unmap(void *iova, size_t size);

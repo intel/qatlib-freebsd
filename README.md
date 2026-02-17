@@ -24,6 +24,7 @@
 
 | Date      |     Doc Revision      | Version |   Details |
 |----------|:-------------:|------:|:------|
+| February 2026 | 002 | 26.02 | - Code aligned with newer QAT API (Return CPA_STATUS_UNSUPPORTED for new APIs which are not supported) <br> - Bug Fixes and improvements. <br> - Static analyser issue fixes. <br> - New instance related functions like cpaGetInstances() and cpaGetNumInstances(). <br> - Enhancements to user space memory management. |
 | September 2023 | 001 | 23.09 | - Initial Release |
 
 ## Overview
@@ -163,6 +164,7 @@ where: \<Component\> is one of the following:
 |-------------|------------|
 | QATE-3241  | [CY - cpaCySymPerformOp when used with parameter checking may reveal the amount of padding.](#qate-3241) |
 | QATE-41707 | [CY - Incorrect digest returned when performing a plain hash operation on input data of size 4GB or larger.](#qate-41707) |
+| QATE-106232 | [CY – using AES-CCM authenticated encryption without Additional Auth Data can cause undefined behaviour.](#qate-106232) |
 
 ## QATE-3241
 | Title      |       CY - cpaCySymPerformOp when used with parameter checking may reveal the amount of padding.        |
@@ -185,6 +187,16 @@ where: \<Component\> is one of the following:
 | Affected OS | FreeBSD |
 | Driver/Module | CPM-IA - Crypto |
 
+## QATE-106232
+| Title      |         CY – using AES-CCM authenticated encryption without Additional Auth Data can cause undefined behaviour.      |
+|----------|:-------------
+| Reference # | QATE-106232 |
+| Description | If CpaCySymHashAuthModeSetupData.aadLenInBytes is 0 and the AAD buffer passed in CpaCySymOpData.pAdditionalAuthData is less than 32 bytes, then the lib will overwrite bytes after the buffer. The API description is open to interpretation on the buffer size required, but is clear that it must be at least 16 bytes. However, bytes from byte 16..31 may be overwritten if aadLenInBytes = 0. |
+| Implication | This may result in undefined behaviour if the application had data stored after the buffer. |
+| Resolution | For CCM case the minimum AAD buffer size must be 32 bytes. |
+| Affected OS | FreeBSD |
+| Driver/Module | CPM IA - Crypto |
+
 ## Resolved Issues
 Resolved issues relating to the Intel® QAT software are described
 in this section.
@@ -199,7 +211,7 @@ Intel Corporation in the U.S. and/or other countries.
 
 *Other names and brands may be claimed as the property of others.
 
-Copyright &copy; 2016-2022, Intel Corporation. All rights reserved.
+Copyright &copy; 2016-2026, Intel Corporation. All rights reserved.
 
 ## Terminology
 

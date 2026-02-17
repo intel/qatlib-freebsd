@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -79,6 +27,7 @@
 #include "cpa_cy_dh.h"
 #include "cpa_cy_im.h"
 #include "cpa_cy_key.h"
+#include "cpa_cy_dsa.h"
 #include "qat_perf_utils.h"
 #include "cpa_sample_code_utils.h"
 #include "cpa_sample_code_framework.h"
@@ -90,7 +39,6 @@
 #ifdef USER_SPACE
 #include <sched.h>
 #endif
-
 
 #ifdef POLL_INLINE
 extern Cpa32U asymPollingInterval_g;
@@ -389,7 +337,11 @@ typedef enum ec_gen_step_s
 #define SHA512_DIGEST_LENGTH_IN_BYTES (512 / NUM_BITS_IN_BYTE)
 #define AES_XCBC_DIGEST_LENGTH_IN_BYTES (128 / NUM_BITS_IN_BYTE)
 #define AES_CCM_DIGEST_LENGTH_IN_BYTES (128 / NUM_BITS_IN_BYTE)
+/* AES-CCM nonce length is dependent on payload size. As per RFC3610 */
+/* 13 byte nonce for payloads up 65535 bytes */
 #define AES_CCM_DEFAULT_NONCE_LENGTH (104 / NUM_BITS_IN_BYTE)
+/* 12 byte nonce for payloads up to 16MB */
+#define AES_CCM_LARGE_REQUEST_NONCE_LENGTH (96 / NUM_BITS_IN_BYTE)
 #define AES_CCM_MIN_AAD_ALLOC_LENGTH (256 / NUM_BITS_IN_BYTE)
 #define AES_GCM_DIGEST_LENGTH_IN_BYTES (128 / NUM_BITS_IN_BYTE)
 #define KASUMI_F9_DIGEST_LENGTH_IN_BYTES (128 / NUM_BITS_IN_BYTE)
@@ -400,7 +352,6 @@ typedef enum ec_gen_step_s
 #define KASUMI_F9_OR_SNOW3G_UIA2_KEY_SIZE_128_IN_BYTES (128 / NUM_BITS_IN_BYTE)
 #define KASUMI_F9_DIGEST_RESULT_LENGTH_IN_BYTES (32 / NUM_BITS_IN_BYTE)
 #define SNOW3G_UIA2_DIGEST_RESULT_LENGTH_IN_BYTES (32 / NUM_BITS_IN_BYTE)
-
 
 #define MD5_BLOCK_LENGTH_IN_BYTES (64)
 #define SHA1_BLOCK_LENGTH_IN_BYTES (64)
@@ -413,6 +364,7 @@ typedef enum ec_gen_step_s
 #define ZUC_EIA3_BLOCK_LENGTH_IN_BYTES (4)
 #define SHA3_256_BLOCK_LENGTH_IN_BYTES (136)
 
+#define POLY_DIGEST_LENGTH_IN_BYTES (16)
 
 /*add for SM3 and SM4*/
 #define SM3_DIGEST_LENGTH_IN_BYTES (32)
@@ -459,7 +411,10 @@ typedef enum ec_gen_step_s
 #define IV_LEN_FOR_24_BYTE_BLOCK_CIPHER (24)
 #define IV_LEN_FOR_12_BYTE_GCM (12)
 #define IV_LEN_FOR_16_BYTE_GCM (16)
+#define IV_AES_BLOCK_SIZE (16)
 
+#define IV_LEN_FOR_12_BYTE_CHACHA (12)
+#define CPA_CIPHER_SPC_IV_SIZE (12)
 
 #define DIGEST_RESULT_4BYTES (4)
 
@@ -565,12 +520,20 @@ typedef enum ec_gen_step_s
 
 /*the following are defined in the framework, these are used for setup only
  * and are not to be used in functions not thread safe*/
-extern Cpa8U thread_setup_g[MAX_THREAD_VARIATION]
-                           [MAX_SETUP_STRUCT_SIZE_IN_BYTES];
+#ifdef USER_SPACE
+extern Cpa8U (*thread_setup_g)[MAX_SETUP_STRUCT_SIZE_IN_BYTES];
+extern Cpa8U (*thread_name_g)[THREAD_NAME_LEN];
+extern thread_creation_data_t *testSetupData_g;
+extern sample_code_thread_t *threads_g;
+extern single_thread_test_data_t *singleThreadData_g;
+#else
+extern Cpa8U thread_setup_g[MAX_THREAD_VARIATION][MAX_SETUP_STRUCT_SIZE_IN_BYTES];
 extern Cpa8U thread_name_g[MAX_THREAD_VARIATION][THREAD_NAME_LEN];
+extern thread_creation_data_t testSetupData_g[MAX_THREAD_VARIATION];
+extern sample_code_thread_t threads_g[MAX_THREADS];
+extern single_thread_test_data_t singleThreadData_g[MAX_THREADS];
+#endif
 extern Cpa32U testTypeCount_g;
-extern thread_creation_data_t testSetupData_g[];
-extern single_thread_test_data_t singleThreadData_g[];
 extern CpaCySymCipherDirection cipherDirection_g;
 
 #define ONE_PACKET (1)
@@ -582,7 +545,6 @@ extern Cpa32U numModSizes;
 extern Cpa32U packetSizes[];
 extern Cpa32U wirelessPacketSizes[];
 extern Cpa32U modSizes[];
-
 
 /*define a back off mechanism to stop performance operations constantly using
  * up 100% CPU.*/
@@ -988,7 +950,7 @@ typedef struct sm2_perf_test_s
 /**
  *****************************************************************************
  * @ingroup cryptoThreads
- *      PLS TFS Setup Data.
+ *      TLS PFS Setup Data.
  * @description
  *      This structure contains data relating to setting up an PLS TFS test.
  *      The client needs to complete the information in this structure in order
@@ -1003,6 +965,34 @@ typedef struct tlspfs_test_params_s
     Cpa32U signOp;
     Cpa32U signSize;
 } tlspfs_test_params_t;
+
+/**
+ *****************************************************************************
+ * @ingroup cryptoThreads
+ *      TLS PFS Generic Setup Data.
+ * @description
+ *      This structure contains data relating to setting up a TLS PFS Generic test.
+ *      The client needs to complete the information in this structure in order
+ *      to setup a test using EC Generic Point Multiply.
+ *
+ ****************************************************************************/
+typedef struct tlspfsGeneric_test_params_s
+{
+    /* asymmetric test parameters for ECDSA or RSA and sync_mode,buffers,loops*/
+    asym_test_params_t param;
+    /* alignment */
+    Cpa32U alignment;
+    /* generator operation used */
+    CpaBoolean generator;
+    /* curve bitmask*/
+    Cpa32U curveBitmask;
+    /* test vector used - currently not used as only 1 vector defined */
+    Cpa32U vector;
+    /* EC Gen step */
+    ec_gen_step_t step;
+    Cpa32U signOp;
+    Cpa32U signSize;
+} tlspfsGeneric_test_params_t;
 
 /**
  *****************************************************************************
@@ -1379,7 +1369,24 @@ CpaStatus setupTlspfsTest(Cpa32U nLenInBits,
                           Cpa32U signSize,
                           Cpa32U numBuffers,
                           Cpa32U numLoops);
-
+/**
+ *****************************************************************************
+ * @ingroup cryptoThreads
+ *      setupTlsPfsGenericsTest
+ *
+ * @description
+ *      setup a test to run an TLSPFS generic test
+ *      - should be called before createTheads framework function
+ *****************************************************************************/
+CpaStatus setupTlspfsGenericTest(sync_mode_t syncMode,
+                                 Cpa32U alignment,
+                                 Cpa32U curveSelectedBitmask,
+                                 Cpa32U vector,
+                                 ec_gen_step_t step,
+                                 Cpa32U signOp,
+                                 Cpa32U signSize,
+                                 Cpa32U numBuffers,
+                                 Cpa32U numLoops);
 /**
  *****************************************************************************
  * @ingroup cryptoThreads
@@ -2223,7 +2230,6 @@ CpaStatus bufferDataMemAlloc(CpaInstanceHandle instanceHandle,
                              Cpa8U *copyData,
                              Cpa32U sizeOfCopyData);
 
-
 /**
  *****************************************************************************
  * @ingroup cryptoThreads
@@ -2497,7 +2503,6 @@ CpaStatus allocArrayOfVirtPointers(void **buf, Cpa32U numBuffs);
  *****************************************************************************/
 CpaStatus cyAllocAndSetupInstances(void);
 
-
 /**
  *****************************************************************************
  * @ingroup cryptoThreads
@@ -2602,7 +2607,6 @@ void printSymTestType(symmetric_test_params_t *setup);
  ******************************************************************************/
 CpaStatus printSymmetricPerfDataAndStopCyService(thread_creation_data_t *data);
 
-
 CpaStatus cyPollNumOperations(perf_data_t *pPerfData,
                               CpaInstanceHandle instanceHandle,
                               Cpa64U numOperations);
@@ -2660,6 +2664,11 @@ CpaStatus sampleCodeSymPollInstance(CpaInstanceHandle instanceHandle,
  * @param[in] data  pointer to test data structure
  ********************************************************************************/
 CpaStatus stopCyServicesFromCallback(thread_creation_data_t *data);
+
+CpaStatus dsaGenZ(CpaInstanceHandle instanceHandle,
+                  CpaFlatBuffer *msg,
+                  CpaCySymHashAlgorithm hashAlg,
+                  CpaFlatBuffer *dsaZ);
 #endif /*_CRYPTO_UTILS_H_*/
 
 /**

@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -211,10 +159,11 @@ static CpaStatus compPerformOp(CpaInstanceHandle dcInstHandle,
                                CpaDcSessionSetupData sd)
 {
     CpaStatus status = CPA_STATUS_SUCCESS;
-    CpaBufferList bufferListSrcArray[NUM_SAMPLE_DATA_BUFFERS];
-    CpaBufferList bufferListDstArray[NUM_SAMPLE_DATA_BUFFERS];
-    CpaBufferList bufferListDstArray2[NUM_SAMPLE_DATA_BUFFERS];
-    Cpa32U bufferSize = SAMPLE_MAX_BUFF;
+    CpaBufferList bufferListSrcArray[NUM_SAMPLE_DATA_BUFFERS] = { { 0 } };
+    CpaBufferList bufferListDstArray[NUM_SAMPLE_DATA_BUFFERS] = { { 0 } };
+    CpaBufferList bufferListDstArray2[NUM_SAMPLE_DATA_BUFFERS] = { { 0 } };
+    Cpa32U srcBufferSize = SAMPLE_MAX_BUFF;
+    Cpa32U dstBufferSize = srcBufferSize;
     Cpa32U numBuffers = NUM_SAMPLE_DATA_BUFFERS;
     Cpa32U bufferNum = 0;
     Cpa32U bufferMetaSize = 0;
@@ -226,6 +175,10 @@ static CpaStatus compPerformOp(CpaInstanceHandle dcInstHandle,
     struct COMPLETION_STRUCT complete;
 
     INIT_OPDATA(&opData, CPA_DC_FLUSH_FINAL);
+    /*
+     * Initialize the completion variable which is used by the callback
+     * function */
+    COMPLETION_INIT(&complete);
 
     status = cpaDcBufferListGetMetaSize(
         dcInstHandle, SINGLE_BUFFER_PER_BUFFERLIST, &bufferMetaSize);
@@ -258,23 +211,27 @@ static CpaStatus compPerformOp(CpaInstanceHandle dcInstHandle,
         {
             status = OS_MALLOC(&bufferListSrcArray[bufferNum].pBuffers,
                                sizeof(CpaFlatBuffer));
+            bufferListSrcArray[bufferNum].pBuffers->pData = NULL;
         }
         if (CPA_STATUS_SUCCESS == status)
         {
             status = OS_MALLOC(&bufferListDstArray[bufferNum].pBuffers,
                                sizeof(CpaFlatBuffer));
+            bufferListDstArray[bufferNum].pBuffers->pData = NULL;
         }
         if (CPA_STATUS_SUCCESS == status)
         {
             status = OS_MALLOC(&bufferListDstArray2[bufferNum].pBuffers,
                                sizeof(CpaFlatBuffer));
+            bufferListDstArray2[bufferNum].pBuffers->pData = NULL;
         }
 
         if (CPA_STATUS_SUCCESS == status)
         {
             status = PHYS_CONTIG_ALLOC(
-                &bufferListSrcArray[bufferNum].pBuffers->pData, bufferSize);
-            bufferListSrcArray[bufferNum].pBuffers->dataLenInBytes = bufferSize;
+                &bufferListSrcArray[bufferNum].pBuffers->pData, srcBufferSize);
+            bufferListSrcArray[bufferNum].pBuffers->dataLenInBytes =
+                srcBufferSize;
         }
 
         /* Destination buffer size is set as sizeof(sampelData) for a
@@ -286,13 +243,14 @@ static CpaStatus compPerformOp(CpaInstanceHandle dcInstHandle,
         if (CPA_STATUS_SUCCESS == status)
         {
             status = cpaDcDeflateCompressBound(
-                dcInstHandle, sd.huffType, bufferSize, &bufferSize);
+                dcInstHandle, sd.huffType, srcBufferSize, &dstBufferSize);
             if (CPA_STATUS_SUCCESS != status)
             {
                 PRINT_ERR(
                     "cpaDcDeflateCompressBound API failed. (status = %d)\n",
                     status);
-                return CPA_STATUS_FAIL;
+                status = CPA_STATUS_FAIL;
+                break;
             }
         }
 #endif
@@ -300,21 +258,22 @@ static CpaStatus compPerformOp(CpaInstanceHandle dcInstHandle,
         if (CPA_STATUS_SUCCESS == status)
         {
             status = PHYS_CONTIG_ALLOC(
-                &bufferListDstArray[bufferNum].pBuffers->pData, bufferSize);
-            bufferListDstArray[bufferNum].pBuffers->dataLenInBytes = bufferSize;
+                &bufferListDstArray[bufferNum].pBuffers->pData, dstBufferSize);
+            bufferListDstArray[bufferNum].pBuffers->dataLenInBytes =
+                dstBufferSize;
         }
         if (CPA_STATUS_SUCCESS == status)
         {
             status = PHYS_CONTIG_ALLOC(
-                &bufferListDstArray2[bufferNum].pBuffers->pData, bufferSize);
+                &bufferListDstArray2[bufferNum].pBuffers->pData, srcBufferSize);
             bufferListDstArray2[bufferNum].pBuffers->dataLenInBytes =
-                bufferSize;
+                srcBufferSize;
         }
         if (CPA_STATUS_SUCCESS == status)
         {
             memcpy(bufferListSrcArray[bufferNum].pBuffers->pData,
-                   sampleData + (bufferNum * bufferSize),
-                   bufferSize);
+                   sampleData + (bufferNum * srcBufferSize),
+                   srcBufferSize);
         }
     }
     if (CPA_STATUS_SUCCESS == status)
@@ -334,9 +293,6 @@ static CpaStatus compPerformOp(CpaInstanceHandle dcInstHandle,
 
         for (bufferNum = 0; bufferNum < numBuffers; bufferNum++)
         {
-
-            COMPLETION_INIT(&complete);
-
             PRINT_DBG("cpaDcCompressData2\n");
             status = cpaDcCompressData2(
                 dcInstHandle,
@@ -425,9 +381,6 @@ static CpaStatus compPerformOp(CpaInstanceHandle dcInstHandle,
         }
         for (bufferNum = 0; bufferNum < numBuffers; bufferNum++)
         {
-
-            COMPLETION_INIT(&complete);
-
             PRINT_DBG("cpaDcDecompressData2\n");
             status = cpaDcDecompressData2(
                 dcInstHandle,
@@ -521,13 +474,23 @@ static CpaStatus compPerformOp(CpaInstanceHandle dcInstHandle,
         PHYS_CONTIG_FREE(bufferListDstArray[bufferNum].pPrivateMetaData);
         PHYS_CONTIG_FREE(bufferListDstArray2[bufferNum].pPrivateMetaData);
 
-        PHYS_CONTIG_FREE(bufferListSrcArray[bufferNum].pBuffers->pData);
-        PHYS_CONTIG_FREE(bufferListDstArray[bufferNum].pBuffers->pData);
-        PHYS_CONTIG_FREE(bufferListDstArray2[bufferNum].pBuffers->pData);
+        if (bufferListSrcArray[bufferNum].pBuffers != NULL)
+        {
+            PHYS_CONTIG_FREE(bufferListSrcArray[bufferNum].pBuffers->pData);
+            OS_FREE(bufferListSrcArray[bufferNum].pBuffers);
+        }
 
-        OS_FREE(bufferListSrcArray[bufferNum].pBuffers);
-        OS_FREE(bufferListDstArray[bufferNum].pBuffers);
-        OS_FREE(bufferListDstArray2[bufferNum].pBuffers);
+        if (bufferListDstArray[bufferNum].pBuffers != NULL)
+        {
+            PHYS_CONTIG_FREE(bufferListDstArray[bufferNum].pBuffers->pData);
+            OS_FREE(bufferListDstArray[bufferNum].pBuffers);
+        }
+
+        if (bufferListDstArray2[bufferNum].pBuffers != NULL)
+        {
+            PHYS_CONTIG_FREE(bufferListDstArray2[bufferNum].pBuffers->pData);
+            OS_FREE(bufferListDstArray2[bufferNum].pBuffers);
+        }
     }
 
     COMPLETION_DESTROY(&complete);
@@ -582,6 +545,9 @@ CpaStatus dcStatelessSample(void)
         return CPA_STATUS_FAIL;
     }
 
+    /* Note : for QAT2.x, The below block won't get executed.
+     * For QAT2.x, intermediate buffers are not required,
+     * Hence cpaDcGetNumIntermediateBuffers() will return 0 */
     if (cap.dynamicHuffmanBufferReq)
     {
         status = cpaDcBufferListGetMetaSize(dcInstHandle, 1, &buffMetaSize);

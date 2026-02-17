@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -115,10 +63,34 @@
  * is performance stats, where each thread as a unique location to store stats
  *
  ******************************************************************************/
-
+#ifdef USER_SPACE
 /*store the threadId, this only used for thread setup and after threads are
  * complete, so it not required to be atomic*/
+sample_code_thread_t *threads_g;
+
+/*this array stores the setup and performance data of all threads created.
+ * there is duplication between this and testSetupData_g,
+ * however this makes it easier for collation of stats when there are
+ * multiple creations of one type of thread.
+ * There is no sharing data between threads*/
+single_thread_test_data_t *singleThreadData_g;
+
+/*this array stores the setup and performance data of ONE_TYPE_OF_THREAD. This
+ * is updated on thread setup and read and clear once all threads are complete*/
+thread_creation_data_t *testSetupData_g;
+
+/*declare space to store setup structures in. This stores all the setup of each
+ * thread, there is no sharing between threads, so each section of the array
+ * is autonomous to 1 thread*/
+Cpa8U (*thread_setup_g)[MAX_SETUP_STRUCT_SIZE_IN_BYTES];
+Cpa8U (*thread_name_g)[THREAD_NAME_LEN];
+#else
 sample_code_thread_t threads_g[MAX_THREADS];
+single_thread_test_data_t singleThreadData_g[MAX_THREADS] = {{0}};
+thread_creation_data_t testSetupData_g[MAX_THREAD_VARIATION] = {{0}};
+Cpa8U thread_setup_g[MAX_THREAD_VARIATION][MAX_SETUP_STRUCT_SIZE_IN_BYTES];
+Cpa8U thread_name_g[MAX_THREAD_VARIATION][THREAD_NAME_LEN];
+#endif
 
 /*declare array of perf_stats pointers. Each thread is provided is own
  * perf_stats */
@@ -128,27 +100,12 @@ perf_data_t *perfStats_g[MAX_THREAD_VARIATION];
 CpaBoolean perfStatsInit_g = CPA_FALSE;
 
 int useStaticPrime = 1;
-
+int useUnalignedBuffer = 0;
 
 volatile CpaBoolean isChangingThreadQaInstanceRequired_g = CPA_FALSE;
 EXPORT_SYMBOL(isChangingThreadQaInstanceRequired_g);
 
-/*this array stores the setup and performance data of all threads created.
- * there is duplication between this and testSetupData_g,
- * however this makes it easier for collation of stats when there are
- * multiple creations of one type of thread.
- * There is no sharing data between threads*/
-single_thread_test_data_t singleThreadData_g[MAX_THREADS] = {{0}};
 
-/*this array stores the setup and performance data of ONE_TYPE_OF_THREAD. This
- * is updated on thread setup and read and clear once all threads are complete*/
-thread_creation_data_t testSetupData_g[MAX_THREAD_VARIATION] = {{0}};
-
-/*declare space to store setup structures in. This stores all the setup of each
- * thread, there is no sharing between threads, so each section of the array
- * is autonomous to 1 thread*/
-Cpa8U thread_setup_g[MAX_THREAD_VARIATION][MAX_SETUP_STRUCT_SIZE_IN_BYTES];
-Cpa8U thread_name_g[MAX_THREAD_VARIATION][THREAD_NAME_LEN];
 
 /*global variables -note syntax is to use _g for all global variables*/
 
@@ -236,8 +193,36 @@ volatile CpaBoolean enableReadInstance_g = CPA_FALSE;
 /* DC chaining specific variable to enable S/W write chaining operation */
 volatile CpaBoolean swWrite_g = CPA_FALSE;
 
+#ifdef SC_WITH_GEN4
+volatile CpaBoolean isNsRequest_g = CPA_FALSE;
+#endif
 int verboseOutput = 1;
 
+CpaStatus setHwVerify(CpaBoolean val);
+CpaStatus setSwWrite(CpaBoolean val);
+CpaStatus setKeyCorrupt(CpaBoolean val);
+CpaStatus enableReadInstance(CpaBoolean val);
+
+#if defined(__FreeBSD__) &&  defined(KERNEL_SPACE)
+CpaBoolean sleepOnRetry = CPA_FALSE;
+#endif
+
+#ifdef SC_WITH_GEN4
+CpaStatus setDcNsFlag(CpaBoolean val)
+{
+    if (val != 0)
+    {
+        isNsRequest_g = CPA_TRUE;
+    }
+    else
+    {
+        isNsRequest_g = CPA_FALSE;
+    }
+    return CPA_STATUS_SUCCESS;
+}
+EXPORT_SYMBOL(isNsRequest_g);
+EXPORT_SYMBOL(setDcNsFlag);
+#endif
 CpaStatus setDataIntegrity(CpaBoolean val)
 {
     dataIntegrity_g = val;
@@ -267,6 +252,20 @@ CpaStatus setReliability(CpaBoolean val)
     }
     return CPA_STATUS_SUCCESS;
 }
+
+CpaStatus setUnalignedBuffer(CpaBoolean val)
+{
+    if (val != 0)
+    {
+        useUnalignedBuffer = CPA_TRUE;
+    }
+    else
+    {
+        useUnalignedBuffer = CPA_FALSE;
+    }
+    return CPA_STATUS_SUCCESS;
+}
+EXPORT_SYMBOL(useUnalignedBuffer);
 
 CpaStatus setUseStaticPrime(int val)
 {
@@ -347,6 +346,7 @@ CpaStatus enableReadInstance(CpaBoolean val)
 
 EXPORT_SYMBOL(reliability_g);
 EXPORT_SYMBOL(setReliability);
+EXPORT_SYMBOL(setUnalignedBuffer);
 EXPORT_SYMBOL(setUseStaticPrime);
 EXPORT_SYMBOL(printReliability);
 EXPORT_SYMBOL(hwVerify_g);
@@ -460,18 +460,30 @@ CpaStatus printFineTune(void)
 CpaStatus enableCycleCount(void)
 {
     iaCycleCount_g = CPA_CC_REQ_POLL_STAMP;
+#ifdef SC_BSD_UPSTREAM
+    singleInstRequired_g = CPA_TRUE;
+#endif
     return CPA_STATUS_SUCCESS;
 }
 
 CpaStatus disableCycleCount(void)
 {
     iaCycleCount_g = CPA_CC_DISABLE;
+#ifdef SC_BSD_UPSTREAM
+    singleInstRequired_g = CPA_FALSE;
+#endif
     return CPA_STATUS_SUCCESS;
 }
 
 CpaStatus setCycleCountMode(int mode)
 {
     iaCycleCount_g = mode;
+#ifdef SC_BSD_UPSTREAM
+    if (mode != CPA_CC_DISABLE)
+        singleInstRequired_g = CPA_TRUE;
+    else
+        singleInstRequired_g = CPA_FALSE;
+#endif
     return CPA_STATUS_SUCCESS;
 }
 
@@ -501,8 +513,6 @@ volatile CpaBoolean poll_inline_g = CPA_FALSE;
 volatile CpaBoolean xltOverflow_g = CPA_FALSE;
 volatile CpaBoolean exitLoopFlag_g = CPA_FALSE;
 volatile CpaBoolean stopTestsIsEnabled_g = CPA_FALSE;
-
-
 
 /* This is function is used to save and restore members
  * of perf stats that should persist after clearing all
@@ -744,7 +754,9 @@ CpaStatus startThreads(void)
      * startThreads has been called*/
     threadState_g = THREAD_STARTED;
     /* Reset the flag, when all threads are executed */
+    sample_code_thread_mutex_lock(&startThreadControlMutex_g);
     numThreadsAtBarrier_g = 0;
+    sample_code_thread_mutex_unlock(&startThreadControlMutex_g);
     FUNC_EXIT();
     return CPA_STATUS_SUCCESS;
 }
@@ -755,6 +767,7 @@ CpaStatus startThreads(void)
 CpaStatus waitForThreadCompletion(void)
 {
     CpaStatus status = CPA_STATUS_SUCCESS;
+    CpaStatus statusPrintFunc = CPA_STATUS_SUCCESS;
     Cpa32U i = 0;
     stats_print_func_t statsPrintFunc;
     FUNC_ENTRY();
@@ -791,10 +804,20 @@ CpaStatus waitForThreadCompletion(void)
             }
             if (CPA_TRUE == singleThreadData_g[i].isUsedByMega)
             {
+                if (CPA_STATUS_UNSUPPORTED ==
+                    singleThreadData_g[i].performanceStats->threadReturnStatus)
+                {
+                    status = CPA_STATUS_UNSUPPORTED;
+                }
                 if (CPA_STATUS_FAIL == status)
                 {
                     PRINT_ERR("Mega Thread using row %d failed\n",
                               singleThreadData_g[i].megaRowId);
+                }
+                else if (CPA_STATUS_UNSUPPORTED == status)
+                {
+                    PRINT("Mega Thread using row %d unsupported\n",
+                          singleThreadData_g[i].megaRowId);
                 }
                 else
                 {
@@ -809,10 +832,14 @@ CpaStatus waitForThreadCompletion(void)
 #endif
         for (i = 0; i < testTypeCount_g; i++)
         {
-            statsPrintFunc = *(testSetupData_g[i].statsPrintFunc);
+	    if ((CPA_STATUS_UNSUPPORTED == status) ||(CPA_STATUS_UNSUPPORTED == singleThreadData_g[i].performanceStats->threadReturnStatus))
+            {
+		continue;
+            }
+	    statsPrintFunc = *(testSetupData_g[i].statsPrintFunc);
             if (statsPrintFunc != NULL)
             {
-                statsPrintFunc(&testSetupData_g[i]);
+                statusPrintFunc = statsPrintFunc(&testSetupData_g[i]);
             }
             else
             {
@@ -827,6 +854,10 @@ CpaStatus waitForThreadCompletion(void)
             {
                 PRINT("---------------------------------------\n\n");
             }
+        }
+        if (statusPrintFunc == CPA_STATUS_FAIL)
+        {
+            status = CPA_STATUS_FAIL;
         }
 #ifndef NEWDISLAY
         PRINT("---------------------------------------\n\n");
@@ -1206,10 +1237,15 @@ void getLongestCycleCount(perf_data_t *dest, perf_data_t *src[], Cpa32U count)
 {
     Cpa32U i = 0;
 
-    if (NULL != dest && NULL != src && NULL != src[0])
+    for (i = 0; i < count; i++)
     {
-        dest->startCyclesTimestamp = src[0]->startCyclesTimestamp;
-        dest->endCyclesTimestamp = src[0]->endCyclesTimestamp;
+        if (src[i]->threadReturnStatus == CPA_STATUS_SUCCESS)
+            break;
+    }
+    if (NULL != dest && NULL != src && NULL != src[i])
+    {
+        dest->startCyclesTimestamp = src[i]->startCyclesTimestamp;
+        dest->endCyclesTimestamp = src[i]->endCyclesTimestamp;
     }
     else
     {
@@ -1219,15 +1255,18 @@ void getLongestCycleCount(perf_data_t *dest, perf_data_t *src[], Cpa32U count)
     }
     for (i = 1; i < count; i++)
     {
-        /*get the lowest start time*/
-        if ((src[i]->startCyclesTimestamp < dest->startCyclesTimestamp))
+        if (src[i]->threadReturnStatus == CPA_STATUS_SUCCESS)
         {
-            dest->startCyclesTimestamp = src[i]->startCyclesTimestamp;
-        }
-        /*get the high finish time*/
-        if ((src[i]->endCyclesTimestamp > dest->endCyclesTimestamp))
-        {
-            dest->endCyclesTimestamp = src[i]->endCyclesTimestamp;
+            /*get the lowest start time*/
+            if ((src[i]->startCyclesTimestamp < dest->startCyclesTimestamp))
+            {
+                dest->startCyclesTimestamp = src[i]->startCyclesTimestamp;
+            }
+            /*get the high finish time*/
+            if ((src[i]->endCyclesTimestamp > dest->endCyclesTimestamp))
+            {
+                dest->endCyclesTimestamp = src[i]->endCyclesTimestamp;
+            }
         }
     }
 }
@@ -1437,12 +1476,11 @@ CpaStatus getCryptoInstanceMapping(void)
                 if (verboseOutput)
                 {
                     PRINT("Inst %u, Affin: %u, Dev: %u, Accel %u, "
-                          "EE %u, BDF %02X:%02X:%02X\n",
+                          "BDF %02X:%02X:%02X\n",
                           i,
                           coreAffinity,
                           info.physInstId.packageId,
                           info.physInstId.acceleratorId,
-                          info.physInstId.executionEngineId,
                           (Cpa8U)((info.physInstId.busAddress) >> 8),
                           (Cpa8U)((info.physInstId.busAddress) & 0xFF) >> 3,
                           (Cpa8U)((info.physInstId.busAddress) & 7));
@@ -1541,19 +1579,6 @@ CpaStatus getSymInstanceMapping(Cpa16U *numSymInstances)
                 {
                     packageIdCount_g = info.physInstId.packageId;
                 }
-                if (verboseOutput)
-                {
-                    PRINT("Inst %u, Affin: %u, Dev: %u, Accel %u, "
-                          "EE %u, BDF %02X:%02X:%02X\n",
-                          i,
-                          coreAffinity,
-                          info.physInstId.packageId,
-                          info.physInstId.acceleratorId,
-                          info.physInstId.executionEngineId,
-                          (Cpa8U)((info.physInstId.busAddress) >> 8),
-                          (Cpa8U)((info.physInstId.busAddress) & 0xFF) >> 3,
-                          (Cpa8U)((info.physInstId.busAddress) & 7));
-                }
                 if (info.isPolled)
                     symCyInstMap_g[i] = coreAffinity;
                 else
@@ -1646,19 +1671,6 @@ CpaStatus getAsymInstanceMapping(Cpa16U *numAsymInstances)
                     (CPA_FALSE == devicesCounted_g))
                 {
                     packageIdCount_g = info.physInstId.packageId;
-                }
-                if (verboseOutput)
-                {
-                    PRINT("Inst %u, Affin: %u, Dev: %u, Accel %u, "
-                          "EE %u, BDF %02X:%02X:%02X\n",
-                          i,
-                          coreAffinity,
-                          info.physInstId.packageId,
-                          info.physInstId.acceleratorId,
-                          info.physInstId.executionEngineId,
-                          (Cpa8U)((info.physInstId.busAddress) >> 8),
-                          (Cpa8U)((info.physInstId.busAddress) & 0xFF) >> 3,
-                          (Cpa8U)((info.physInstId.busAddress) & 7));
                 }
                 if (info.isPolled)
                     asymCyInstMap_g[i] = coreAffinity;
@@ -1756,12 +1768,11 @@ CpaStatus getCompressionInstanceMapping(void)
                 if (verboseOutput)
                 {
                     PRINT("Inst %u, Affin: %u, Dev: %u, Accel %u, "
-                          "EE %u, BDF %02X:%02X:%02X\n",
+                          "BDF %02X:%02X:%02X\n",
                           i,
                           coreAffinity,
                           info.physInstId.packageId,
                           info.physInstId.acceleratorId,
-                          info.physInstId.executionEngineId,
                           (Cpa8U)((info.physInstId.busAddress) >> 8),
                           (Cpa8U)((info.physInstId.busAddress) & 0xFF) >> 3,
                           (Cpa8U)((info.physInstId.busAddress) & 7));
@@ -1819,7 +1830,8 @@ CpaStatus createStartandWaitForCompletion(Cpa32U instType)
     Cpa16U nSymInstances = 0;
     Cpa16U nAsymInstances = 0;
 
-    if (instType != COMPRESSION)
+    if ((instType != COMPRESSION)
+    )
     {
         cpaGetNumInstances(CPA_ACC_SVC_TYPE_CRYPTO_SYM, &nSymInstances);
         cpaGetNumInstances(CPA_ACC_SVC_TYPE_CRYPTO_ASYM, &nAsymInstances);
@@ -1953,6 +1965,69 @@ CpaStatus createStartandWaitForCompletion(Cpa32U instType)
     freeInstanceMapping();
     return status;
 }
+CpaStatus allocThreadMem()
+{
+#ifdef USER_SPACE
+   testSetupData_g = qaeMemAlloc(sizeof(thread_creation_data_t) * MAX_THREAD_VARIATION);
+   if(testSetupData_g == NULL)
+   {
+      PRINT_ERR("Failed to allocate memory for testSetupData\n");
+      return CPA_STATUS_FAIL;
+   }
+   singleThreadData_g = qaeMemAlloc(sizeof(single_thread_test_data_t) * MAX_THREADS);
+   if(singleThreadData_g ==NULL)
+   {
+      PRINT_ERR("Failed to allocate memory for singleThreadData\n");
+      return CPA_STATUS_FAIL;
+    }
+   threads_g = qaeMemAlloc(sizeof(sample_code_thread_t) * MAX_THREADS);
+   if(threads_g ==NULL)
+   {
+      PRINT_ERR("Failed to allocate memory for thread\n");
+      return CPA_STATUS_FAIL;
+   }
+   thread_setup_g = qaeMemAlloc(sizeof(*thread_setup_g) * MAX_THREAD_VARIATION);
+   if (*thread_setup_g == NULL)
+   {
+       PRINT_ERR("Failed to allocate memory for thread_setup_g\n");
+       return CPA_STATUS_FAIL;
+   }
+   thread_name_g = qaeMemAlloc(sizeof(*thread_name_g) * MAX_THREAD_VARIATION);
+   if (*thread_name_g == NULL)
+   {
+      PRINT_ERR("Failed to allocate memory for thread_name_g\n");
+      return CPA_STATUS_FAIL;
+   }
+#endif
+   return CPA_STATUS_SUCCESS;
+}
+EXPORT_SYMBOL(allocThreadMem);
+void freeThreadMem()
+{
+#ifdef USER_SPACE
+   if(testSetupData_g != NULL)
+   {
+      qaeMemFree((void **)&testSetupData_g);
+   }
+   if(singleThreadData_g != NULL)
+   {
+      qaeMemFree((void **)&singleThreadData_g);
+   }
+   if(threads_g!= NULL)
+   {
+      qaeMemFree((void **)&threads_g);
+   }
+   if((*thread_setup_g) != NULL)
+   {
+      qaeMemFree((void **)&(thread_setup_g));
+   }
+   if((*thread_name_g) != NULL)
+   {
+       qaeMemFree((void **)&(thread_name_g));
+   }
+#endif
+}
+EXPORT_SYMBOL(freeThreadMem);
 
 int latency_debug = 0; /* set to 1 for debug PRINT() */
 EXPORT_SYMBOL(latency_debug);

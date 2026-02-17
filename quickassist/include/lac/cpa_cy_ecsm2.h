@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -126,7 +74,8 @@ extern "C" {
  *      cpaCyEcsm2Encrypt()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcsm2EncryptOpData {
+typedef struct _CpaCyEcsm2EncryptOpData
+{
     CpaFlatBuffer k;
     /**< scalar multiplier  (k > 0 and k < n) */
     CpaFlatBuffer xP;
@@ -171,7 +120,8 @@ typedef struct _CpaCyEcsm2EncryptOpData {
  *      cpaCyEcsm2Decrypt()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcsm2DecryptOpData {
+typedef struct _CpaCyEcsm2DecryptOpData
+{
     CpaFlatBuffer d;
     /**< private key  (d > 0 and d < n) */
     CpaFlatBuffer x1;
@@ -189,12 +139,12 @@ typedef struct _CpaCyEcsm2DecryptOpData {
  *      SM2 Point Multiplication Operation Data.
  *
  * @description
- *      This structure contains the operation data for the cpaCyEcsm2PointMultiply
- *      function. The client MUST allocate the memory for this structure and the
- *      items pointed to by this structure. When the structure is passed into
- *      the function, ownership of the memory passes to the function. Ownership
- *      of the memory returns to the client when this structure is returned in
- *      the callback function.
+ *      This structure contains the operation data for the
+ *      cpaCyEcsm2PointMultiply function. The client MUST allocate the memory
+ *      for this structure and the items pointed to by this structure. When the
+ *      structure is passed into the function, ownership of the memory passes to
+ *      the function. Ownership of the memory returns to the client when this
+ *      structure is returned in the callback function.
  *
  *      For optimal performance all data buffers SHOULD be 8-byte aligned.
  *
@@ -211,7 +161,8 @@ typedef struct _CpaCyEcsm2DecryptOpData {
  *      cpaCyEcsm2PointMultiply()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcsm2PointMultiplyOpData {
+typedef struct _CpaCyEcsm2PointMultiplyOpData
+{
     CpaFlatBuffer k;
     /**< scalar multiplier  (k > 0 and k < n) */
     CpaFlatBuffer x;
@@ -251,7 +202,8 @@ typedef struct _CpaCyEcsm2PointMultiplyOpData {
  *      cpaCyEcsm2GeneratorMultiply()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcsm2GeneratorMultiplyOpData {
+typedef struct _CpaCyEcsm2GeneratorMultiplyOpData
+{
     CpaFlatBuffer k;
     /**< scalar multiplier  (k > 0 and k < n) */
     CpaCyEcFieldType fieldType;
@@ -287,7 +239,8 @@ typedef struct _CpaCyEcsm2GeneratorMultiplyOpData {
  *      cpaCyEcsm2PointVerify()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcsm2PointVerifyOpData {
+typedef struct _CpaCyEcsm2PointVerifyOpData
+{
     CpaFlatBuffer x;
     /**< x coordinate of a point on the curve */
     CpaFlatBuffer y;
@@ -325,7 +278,8 @@ typedef struct _CpaCyEcsm2PointVerifyOpData {
  *      cpaCyEcsm2Sign()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcsm2SignOpData {
+typedef struct _CpaCyEcsm2SignOpData
+{
     CpaFlatBuffer k;
     /**< scalar multiplier (k > 0 and k < n) */
     CpaFlatBuffer e;
@@ -365,7 +319,8 @@ typedef struct _CpaCyEcsm2SignOpData {
  *      cpaCyEcsm2Verify()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcsm2VerifyOpData {
+typedef struct _CpaCyEcsm2VerifyOpData
+{
     CpaFlatBuffer e;
     /**< digest of the message */
     CpaFlatBuffer r;
@@ -409,7 +364,8 @@ typedef struct _CpaCyEcsm2VerifyOpData {
  *      cpaCyEcsm2KeyExPhase1()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcsm2KeyExPhase1OpData {
+typedef struct _CpaCyEcsm2KeyExPhase1OpData
+{
     CpaFlatBuffer r;
     /**< scalar multiplier  (r > 0 and r < n) */
     CpaCyEcFieldType fieldType;
@@ -445,7 +401,8 @@ typedef struct _CpaCyEcsm2KeyExPhase1OpData {
  *      cpaCyEcsm2KeyExPhase2()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcsm2KeyExPhase2OpData {
+typedef struct _CpaCyEcsm2KeyExPhase2OpData
+{
     CpaFlatBuffer r;
     /**< scalar multiplier  (r > 0 and r < n) */
     CpaFlatBuffer d;
@@ -481,7 +438,8 @@ typedef struct _CpaCyEcsm2KeyExPhase2OpData {
  *      cpaCyEcsm2Encrypt()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcsm2EncryptOutputData {
+typedef struct _CpaCyEcsm2EncryptOutputData
+{
     CpaFlatBuffer x1;
     /**< x coordinate of [k]G */
     CpaFlatBuffer y1;
@@ -509,7 +467,8 @@ typedef struct _CpaCyEcsm2EncryptOutputData {
  *      cpaCyEcsm2Decrypt()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcsm2DecryptOutputData {
+typedef struct _CpaCyEcsm2DecryptOutputData
+{
     CpaFlatBuffer x2;
     /**< x coordinate of [k]Pb */
     CpaFlatBuffer y2;
@@ -533,7 +492,8 @@ typedef struct _CpaCyEcsm2DecryptOutputData {
  *      cpaCyEcsm2KeyExPhase1(),cpaCyEcsm2KeyExPhase2()
  *
  *****************************************************************************/
-typedef struct _CpaCyEcsm2KeyExOutputData {
+typedef struct _CpaCyEcsm2KeyExOutputData
+{
     CpaFlatBuffer x;
     /**< x coordinate of a point on the curve */
     CpaFlatBuffer y;
@@ -551,7 +511,8 @@ typedef struct _CpaCyEcsm2KeyExOutputData {
  *      initialized, and are collected per instance.
  *
  ****************************************************************************/
-typedef struct _CpaCyEcsm2Stats64 {
+typedef struct _CpaCyEcsm2Stats64
+{
     Cpa64U numEcsm2PointMultiplyRequests;
     /**< Total number of ECSM2 Point Multiplication operation requests. */
     Cpa64U numEcsm2PointMultiplyRequestErrors;
@@ -604,7 +565,7 @@ typedef struct _CpaCyEcsm2Stats64 {
     /**< Total number of ECSM2 Sign operation requests. */
     Cpa64U numEcsm2SignRequestErrors;
     /**< Total number of ECSM2 Sign operation requests that had an error
-    * and could not be processed. */
+     * and could not be processed. */
     Cpa64U numEcsm2SignCompleted;
     /**< Total number of ECSM2 Sign operation requests that completed
      * successfully. */
@@ -744,11 +705,11 @@ typedef struct _CpaCyEcsm2Stats64 {
  *
  *****************************************************************************/
 typedef void (*CpaCyEcsm2SignCbFunc)(void *pCallbackTag,
-        CpaStatus status,
-        void *pOpData,
-        CpaBoolean pass,
-        CpaFlatBuffer *pR,
-        CpaFlatBuffer *pS);
+                                     CpaStatus status,
+                                     void *pOpData,
+                                     CpaBoolean pass,
+                                     CpaFlatBuffer *pR,
+                                     CpaFlatBuffer *pS);
 
 /**
  *****************************************************************************
@@ -790,9 +751,9 @@ typedef void (*CpaCyEcsm2SignCbFunc)(void *pCallbackTag,
  *
  *****************************************************************************/
 typedef void (*CpaCyEcsm2VerifyCbFunc)(void *pCallbackTag,
-        CpaStatus status,
-        void *pOpData,
-        CpaBoolean verifyStatus);
+                                       CpaStatus status,
+                                       void *pOpData,
+                                       CpaBoolean verifyStatus);
 
 /**
  *****************************************************************************
@@ -852,22 +813,21 @@ typedef void (*CpaCyEcsm2VerifyCbFunc)(void *pCallbackTag,
  *      None
  * @note
  *      When pCb is non-NULL an asynchronous callback of type
- *      CpaCyEcsm2PointMultiplyCbFunc is generated in response to this function call.
- *      For optimal performance, data pointers SHOULD be 8-byte aligned.
+ *      CpaCyEcsm2PointMultiplyCbFunc is generated in response to this function
+ *      call. For optimal performance, data pointers SHOULD be 8-byte aligned.
  *
  * @see
  *      CpaCyEcsm2PointMultiplyOpData,
  *      CpaCyEcPointMultiplyCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyEcsm2PointMultiply(const CpaInstanceHandle instanceHandle,
-                    const CpaCyEcPointMultiplyCbFunc pCb,
-                    void *pCallbackTag,
-                    const CpaCyEcsm2PointMultiplyOpData *pOpData,
-                    CpaBoolean *pMultiplyStatus,
-                    CpaFlatBuffer *pXk,
-                    CpaFlatBuffer *pYk);
+CpaStatus cpaCyEcsm2PointMultiply(const CpaInstanceHandle instanceHandle,
+                                  const CpaCyEcPointMultiplyCbFunc pCb,
+                                  void *pCallbackTag,
+                                  const CpaCyEcsm2PointMultiplyOpData *pOpData,
+                                  CpaBoolean *pMultiplyStatus,
+                                  CpaFlatBuffer *pXk,
+                                  CpaFlatBuffer *pYk);
 
 /**
  *****************************************************************************
@@ -935,14 +895,14 @@ cpaCyEcsm2PointMultiply(const CpaInstanceHandle instanceHandle,
  *      CpaCyEcPointMultiplyCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyEcsm2GeneratorMultiply(const CpaInstanceHandle instanceHandle,
-                    const CpaCyEcPointMultiplyCbFunc pCb,
-                    void *pCallbackTag,
-                    const CpaCyEcsm2GeneratorMultiplyOpData *pOpData,
-                    CpaBoolean *pMultiplyStatus,
-                    CpaFlatBuffer *pXk,
-                    CpaFlatBuffer *pYk);
+CpaStatus cpaCyEcsm2GeneratorMultiply(
+    const CpaInstanceHandle instanceHandle,
+    const CpaCyEcPointMultiplyCbFunc pCb,
+    void *pCallbackTag,
+    const CpaCyEcsm2GeneratorMultiplyOpData *pOpData,
+    CpaBoolean *pMultiplyStatus,
+    CpaFlatBuffer *pXk,
+    CpaFlatBuffer *pYk);
 
 /**
  *****************************************************************************
@@ -1006,12 +966,11 @@ cpaCyEcsm2GeneratorMultiply(const CpaInstanceHandle instanceHandle,
  *      CpaCyEcPointVerifyCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyEcsm2PointVerify(const CpaInstanceHandle instanceHandle,
-        const CpaCyEcPointVerifyCbFunc pCb,
-        void *pCallbackTag,
-        const CpaCyEcsm2PointVerifyOpData *pOpData,
-        CpaBoolean *pVerifyStatus);
+CpaStatus cpaCyEcsm2PointVerify(const CpaInstanceHandle instanceHandle,
+                                const CpaCyEcPointVerifyCbFunc pCb,
+                                void *pCallbackTag,
+                                const CpaCyEcsm2PointVerifyOpData *pOpData,
+                                CpaBoolean *pVerifyStatus);
 
 /**
  *****************************************************************************
@@ -1077,14 +1036,13 @@ cpaCyEcsm2PointVerify(const CpaInstanceHandle instanceHandle,
  *      CpaCyEcsm2SignCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyEcsm2Sign(const CpaInstanceHandle instanceHandle,
-               const CpaCyEcsm2SignCbFunc pCb,
-               void *pCallbackTag,
-               const CpaCyEcsm2SignOpData *pOpData,
-               CpaBoolean *pSignStatus,
-               CpaFlatBuffer *pR,
-               CpaFlatBuffer *pS);
+CpaStatus cpaCyEcsm2Sign(const CpaInstanceHandle instanceHandle,
+                         const CpaCyEcsm2SignCbFunc pCb,
+                         void *pCallbackTag,
+                         const CpaCyEcsm2SignOpData *pOpData,
+                         CpaBoolean *pSignStatus,
+                         CpaFlatBuffer *pR,
+                         CpaFlatBuffer *pS);
 
 /**
  *****************************************************************************
@@ -1148,12 +1106,11 @@ cpaCyEcsm2Sign(const CpaInstanceHandle instanceHandle,
  *      CpaCyEcsm2VerifyCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyEcsm2Verify(const CpaInstanceHandle instanceHandle,
-        const CpaCyEcsm2VerifyCbFunc pCb,
-        void *pCallbackTag,
-        const CpaCyEcsm2VerifyOpData *pOpData,
-        CpaBoolean *pVerifyStatus);
+CpaStatus cpaCyEcsm2Verify(const CpaInstanceHandle instanceHandle,
+                           const CpaCyEcsm2VerifyCbFunc pCb,
+                           void *pCallbackTag,
+                           const CpaCyEcsm2VerifyOpData *pOpData,
+                           CpaBoolean *pVerifyStatus);
 
 /**
  *****************************************************************************
@@ -1216,12 +1173,11 @@ cpaCyEcsm2Verify(const CpaInstanceHandle instanceHandle,
  *      CpaCyGenFlatBufCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyEcsm2Encrypt(const CpaInstanceHandle instanceHandle,
-              const CpaCyGenFlatBufCbFunc pCb,
-              void *pCallbackTag,
-              const CpaCyEcsm2EncryptOpData *pOpData,
-              CpaCyEcsm2EncryptOutputData *pOutputData);
+CpaStatus cpaCyEcsm2Encrypt(const CpaInstanceHandle instanceHandle,
+                            const CpaCyGenFlatBufCbFunc pCb,
+                            void *pCallbackTag,
+                            const CpaCyEcsm2EncryptOpData *pOpData,
+                            CpaCyEcsm2EncryptOutputData *pOutputData);
 
 /**
  *****************************************************************************
@@ -1284,12 +1240,11 @@ cpaCyEcsm2Encrypt(const CpaInstanceHandle instanceHandle,
  *      CpaCyGenFlatBufCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyEcsm2Decrypt(const CpaInstanceHandle instanceHandle,
-                    const CpaCyGenFlatBufCbFunc pCb,
-                    void *pCallbackTag,
-                    const CpaCyEcsm2DecryptOpData *pOpData,
-                    CpaCyEcsm2DecryptOutputData *pOutputData);
+CpaStatus cpaCyEcsm2Decrypt(const CpaInstanceHandle instanceHandle,
+                            const CpaCyGenFlatBufCbFunc pCb,
+                            void *pCallbackTag,
+                            const CpaCyEcsm2DecryptOpData *pOpData,
+                            CpaCyEcsm2DecryptOutputData *pOutputData);
 
 /**
  *****************************************************************************
@@ -1352,12 +1307,11 @@ cpaCyEcsm2Decrypt(const CpaInstanceHandle instanceHandle,
  *      CpaCyGenFlatBufCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyEcsm2KeyExPhase1(const CpaInstanceHandle instanceHandle,
-                    const CpaCyGenFlatBufCbFunc pCb,
-                    void *pCallbackTag,
-                    const CpaCyEcsm2KeyExPhase1OpData *pOpData,
-                    CpaCyEcsm2KeyExOutputData *pOutputData);
+CpaStatus cpaCyEcsm2KeyExPhase1(const CpaInstanceHandle instanceHandle,
+                                const CpaCyGenFlatBufCbFunc pCb,
+                                void *pCallbackTag,
+                                const CpaCyEcsm2KeyExPhase1OpData *pOpData,
+                                CpaCyEcsm2KeyExOutputData *pOutputData);
 /**
  *****************************************************************************
  * @file cpa_cy_ec.h
@@ -1419,12 +1373,11 @@ cpaCyEcsm2KeyExPhase1(const CpaInstanceHandle instanceHandle,
  *      CpaCyGenFlatBufCbFunc
  *
  *****************************************************************************/
-CpaStatus
-cpaCyEcsm2KeyExPhase2(const CpaInstanceHandle instanceHandle,
-                    const CpaCyGenFlatBufCbFunc pCb,
-                    void *pCallbackTag,
-                    const CpaCyEcsm2KeyExPhase2OpData *pOpData,
-                    CpaCyEcsm2KeyExOutputData *pOutputData);
+CpaStatus cpaCyEcsm2KeyExPhase2(const CpaInstanceHandle instanceHandle,
+                                const CpaCyGenFlatBufCbFunc pCb,
+                                void *pCallbackTag,
+                                const CpaCyEcsm2KeyExPhase2OpData *pOpData,
+                                CpaCyEcsm2KeyExOutputData *pOutputData);
 /**
  *****************************************************************************
  * @file cpa_cy_ecsm2.h
@@ -1479,9 +1432,8 @@ cpaCyEcsm2KeyExPhase2(const CpaInstanceHandle instanceHandle,
  *      CpaCyEcsm2Stats64
  *****************************************************************************/
 
-CpaStatus
-cpaCyEcsm2QueryStats64(const CpaInstanceHandle instanceHandle_in,
-		CpaCyEcsm2Stats64 *pEcsm2Stats);
+CpaStatus cpaCyEcsm2QueryStats64(const CpaInstanceHandle instanceHandle_in,
+                                 CpaCyEcsm2Stats64 *pEcsm2Stats);
 
 #ifdef __cplusplus
 } /* close the extern "C" { */

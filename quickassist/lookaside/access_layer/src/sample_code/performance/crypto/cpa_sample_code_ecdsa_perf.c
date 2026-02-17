@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -97,6 +45,51 @@
 
 extern Cpa32U packageIdCount_g;
 CpaBoolean msgFlagSym2 = CPA_FALSE;
+
+void ecdsaPerformCallback(void *pCallbackTag,
+                          CpaStatus status,
+                          void *pOpData,
+                          CpaBoolean verifyStatus);
+void ecdsaPointMultiplyPerformCallback(void *pCallbackTag,
+                                       CpaStatus status,
+                                       void *pOpData,
+                                       CpaBoolean multiplyStatus,
+                                       CpaFlatBuffer *pR,
+                                       CpaFlatBuffer *pS);
+void ecdsaSignOnlyPerformCallback(void *pCallbackTag,
+                                  CpaStatus status,
+                                  void *pOpData,
+                                  CpaBoolean multiplyStatus,
+                                  CpaFlatBuffer *pR,
+                                  CpaFlatBuffer *pS);
+CpaStatus getCurveData(ecdsa_test_params_t *setup);
+CpaStatus calcEcPoint(ecdsa_test_params_t *setup,
+                      CpaFlatBuffer *k,
+                      CpaFlatBuffer *pXk,
+                      CpaFlatBuffer *pYk);
+CpaStatus ecdsaSignRSOpDataSetup(ecdsa_test_params_t *setup,
+                                 CpaFlatBuffer *d,
+                                 CpaFlatBuffer *r,
+                                 CpaFlatBuffer *s,
+                                 CpaFlatBuffer *message,
+                                 CpaFlatBuffer *z,
+                                 CpaFlatBuffer *pDigest,
+                                 perf_data_t *pEcdsaData,
+                                 CpaCyEcdsaSignRSOpData *pSignRSOpData);
+CpaStatus ecdsaPerform(ecdsa_test_params_t *setup);
+void ecdsaPerformance(single_thread_test_data_t *testSetup);
+void ecdsaPerformRsOnlyMemFree(
+    ecdsa_test_params_t *setup,
+    CpaFlatBuffer *pX,
+    CpaFlatBuffer *pY,
+    CpaFlatBuffer *pR,
+    CpaFlatBuffer *pS,
+    CpaFlatBuffer *msg,
+    CpaFlatBuffer *pZ,
+    CpaFlatBuffer **ppDigests,
+    CpaCyEcdsaSignRSOpData **ppSignRSOpData,
+    CpaCyEcPointMultiplyOpData **ppPointMultiplyOpData,
+    CpaFlatBuffer privateKey);
 
 ///*
 // * ***********************************************************************
@@ -272,34 +265,6 @@ CpaStatus calcEcPoint(ecdsa_test_params_t *setup,
     CpaCyEcPointMultiplyCbFunc cbFunc = NULL;
 #ifdef POLL_INLINE
     CpaInstanceInfo2 *instanceInfo2 = NULL;
-    instanceInfo2 = qaeMemAlloc(sizeof(CpaInstanceInfo2));
-    if (instanceInfo2 == NULL)
-    {
-        PRINT_ERR("Failed to allocate memory for instanceInfo2");
-        return CPA_STATUS_FAIL;
-    }
-    memset(instanceInfo2, 0, sizeof(CpaInstanceInfo2));
-
-    if (poll_inline_g)
-    {
-        cbFunc = calcEcPointCb;
-        pPerfData = setup->performanceStats;
-        pPerfData->numOperations = SINGLE_OPERATION;
-        pPerfData->responses = 0;
-    }
-#endif
-
-#ifdef POLL_INLINE
-    if (poll_inline_g)
-    {
-        status = cpaCyInstanceGetInfo2(setup->cyInstanceHandle, instanceInfo2);
-        if (CPA_STATUS_SUCCESS != status)
-        {
-            PRINT_ERR("cpaCyInstanceGetInfo2 error, status: %d\n", status);
-            qaeMemFree((void **)&instanceInfo2);
-            return CPA_STATUS_FAIL;
-        }
-    }
 #endif
 
     /*allocate the operation data structure and copy in the elliptic curve
@@ -358,7 +323,31 @@ CpaStatus calcEcPoint(ecdsa_test_params_t *setup,
                          setup->pCurve->yg,
                          setup->pCurve->sizeOfyg,
                          CALC_EC_POINT_MEM_FREE);
+#ifdef POLL_INLINE
+    instanceInfo2 = qaeMemAlloc(sizeof(CpaInstanceInfo2));
+    if (instanceInfo2 == NULL)
+    {
+        PRINT_ERR("Failed to allocate memory for instanceInfo2");
+        return CPA_STATUS_FAIL;
+    }
+    memset(instanceInfo2, 0, sizeof(CpaInstanceInfo2));
 
+    if (poll_inline_g)
+    {
+        cbFunc = calcEcPointCb;
+        pPerfData = setup->performanceStats;
+        pPerfData->numOperations = SINGLE_OPERATION;
+        pPerfData->responses = 0;
+
+        status = cpaCyInstanceGetInfo2(setup->cyInstanceHandle, instanceInfo2);
+        if (CPA_STATUS_SUCCESS != status)
+        {
+            PRINT_ERR("cpaCyInstanceGetInfo2 error, status: %d\n", status);
+            qaeMemFree((void **)&instanceInfo2);
+            return CPA_STATUS_FAIL;
+        }
+    }
+#endif
     /*make sure the private key is less than the modulus*/
     makeParam1SmallerThanParam2(
         k->pData, opData.q.pData, k->dataLenInBytes, CPA_FALSE);
@@ -464,6 +453,9 @@ EXPORT_SYMBOL(calcEcPoint);
         if (NULL != pDigest->pData)                                            \
             qaeMemFreeNUMA((void **)&pDigest->pData);                          \
     } while (0)
+
+#ifdef USER_SPACE
+#endif /* USER_SPACE */
 
 CpaStatus ecdsaSignRSOpDataSetup(ecdsa_test_params_t *setup,
                                  CpaFlatBuffer *d,
@@ -610,14 +602,14 @@ EXPORT_SYMBOL(ecdsaSignRSOpDataSetup);
  *      Sign the digest of a random message using elliptic curve data in setup
  *      parameter
  ***************************************************************************/
-CpaStatus ecdsaSignRS(ecdsa_test_params_t *setup,
-                      CpaFlatBuffer *d,
-                      CpaFlatBuffer *r,
-                      CpaFlatBuffer *s,
-                      CpaFlatBuffer *message,
-                      CpaFlatBuffer *z,
-                      CpaCyEcdsaSignRSCbFunc cbFunc,
-                      perf_data_t *pEcdsaData)
+static CpaStatus ecdsaSignRS(ecdsa_test_params_t *setup,
+                             CpaFlatBuffer *d,
+                             CpaFlatBuffer *r,
+                             CpaFlatBuffer *s,
+                             CpaFlatBuffer *message,
+                             CpaFlatBuffer *z,
+                             CpaCyEcdsaSignRSCbFunc cbFunc,
+                             perf_data_t *pEcdsaData)
 {
     CpaStatus status = CPA_STATUS_FAIL;
     CpaBoolean signStatus = CPA_FALSE;
@@ -726,7 +718,7 @@ CpaStatus ecdsaSignRS(ecdsa_test_params_t *setup,
             generateRandomData(iv, IV_LEN_IN_BYTES);
 
             pKPTSignRSOpData = qaeMemAllocNUMA(
-                sizeof(CpaCyKptEcdsaSignRSOpData *), node, BYTE_ALIGNMENT_64);
+                sizeof(CpaCyKptEcdsaSignRSOpData), node, BYTE_ALIGNMENT_64);
             if (NULL == pKPTSignRSOpData)
             {
                 PRINT_ERR("pKPTSignRSOpData qaeMemAlloc error\n");
@@ -918,15 +910,15 @@ CpaStatus ecdsaSignRS(ecdsa_test_params_t *setup,
         ecdsaMemFree(setup, pX, pY, pR, pS, msg, pZ, ppOpData, privateKey);    \
     } while (0)
 
-void ecdsaMemFree(ecdsa_test_params_t *setup,
-                  CpaFlatBuffer *pX,
-                  CpaFlatBuffer *pY,
-                  CpaFlatBuffer *pR,
-                  CpaFlatBuffer *pS,
-                  CpaFlatBuffer *msg,
-                  CpaFlatBuffer *pZ,
-                  CpaCyEcdsaVerifyOpData **ppOpData,
-                  CpaFlatBuffer privateKey)
+static void ecdsaMemFree(ecdsa_test_params_t *setup,
+                         CpaFlatBuffer *pX,
+                         CpaFlatBuffer *pY,
+                         CpaFlatBuffer *pR,
+                         CpaFlatBuffer *pS,
+                         CpaFlatBuffer *msg,
+                         CpaFlatBuffer *pZ,
+                         CpaCyEcdsaVerifyOpData **ppOpData,
+                         CpaFlatBuffer privateKey)
 {
     Cpa32U k = 0;
 
@@ -957,8 +949,14 @@ void ecdsaMemFree(ecdsa_test_params_t *setup,
         }
     }
     /* free all memory */
-    qaeMemFreeNUMA((void **)&pX->pData);
-    qaeMemFreeNUMA((void **)&pY->pData);
+    if (NULL != pX && NULL != pX->pData)
+    {
+        qaeMemFreeNUMA((void **)&pX->pData);
+    }
+    if (NULL != pY && NULL != pY->pData)
+    {
+        qaeMemFreeNUMA((void **)&pY->pData);
+    }
     qaeMemFree((void **)&pX);
     qaeMemFree((void **)&pY);
     qaeMemFree((void **)&pR);
@@ -1661,14 +1659,13 @@ barrier:
 }
 EXPORT_SYMBOL(ecdsaPerform);
 
-
 /***************************************************************************
  * @ingroup cryptoThreads
  *
  * @description
  *      Print the performance stats of the elliptic curve dsa operations
  ***************************************************************************/
-CpaStatus ecdsaPrintStats(thread_creation_data_t *data)
+static CpaStatus ecdsaPrintStats(thread_creation_data_t *data)
 {
     ecdsa_test_params_t *params = (ecdsa_test_params_t *)data->setupPtr;
     if (ECDSA_STEP_SIGNRS == params->step)
@@ -1802,7 +1799,8 @@ void ecdsaPerformance(single_thread_test_data_t *testSetup)
 
 #ifdef SC_DEV_INFO_ENABLED
     /* check whether asym service enabled or not for the instance */
-    status = cpaGetDeviceInfo(instanceInfo->physInstId.packageId, &deviceInfo);
+    status =
+        cpaGetDeviceInfo(instanceInfo->physInstId.acceleratorId, &deviceInfo);
     if (CPA_STATUS_SUCCESS != status)
     {
         PRINT_ERR("%s::%d cpaGetDeviceInfo failed", __func__, __LINE__);
@@ -1952,3 +1950,4 @@ CpaStatus setupEcdsaTest(Cpa32U nLenInBits,
     ecdsaSetup->step = step;
     return CPA_STATUS_SUCCESS;
 }
+

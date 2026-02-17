@@ -1,62 +1,10 @@
 /******************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  *****************************************************************************/
 
@@ -78,6 +26,10 @@
 #include "qae_mem.h"
 #else
 #include "qae_mem_utils.h"
+#endif
+
+#if   defined(SC_WITH_QAT20_UPSTREAM)
+#define SC_WITH_GEN4
 #endif
 
 #ifndef SAMPLE_CODE_CORPUS_PATH
@@ -115,6 +67,13 @@ typedef CpaStatus (*stats_print_func_t)(void *);
 typedef unsigned long long perf_cycles_t;
 extern volatile Cpa32U numArrivedThreads_g;
 extern CpaBoolean SampleCodeBarrierLifted;
+#if defined(__FreeBSD__) &&  defined(KERNEL_SPACE)
+/* For dc small payloads, huge number of retries are seen resulting
+ * in timeouts. Hence on a retry, slow down the request submissions
+ * by using sleep of 10 nanoseconds.
+ */
+extern CpaBoolean sleepOnRetry;
+#endif
 /**
  *****************************************************************************
  * @ingroup perfCodeFramework
@@ -142,7 +101,6 @@ typedef struct sample_code_thread_attr_s
     Cpa32U priority;  /**< priority */
     Cpa32S policy;    /**< policy */
 } sample_code_thread_attr_t;
-
 
 /**
  *****************************************************************************
@@ -244,6 +202,10 @@ typedef struct perf_data_s
 #else
 #define SAMPLE_CODE_WAIT_DEFAULT (30000)
 #endif
+#ifdef ICP_HAPS
+#undef SAMPLE_CODE_WAIT_DEFAULT
+#define SAMPLE_CODE_WAIT_DEFAULT (-1)
+#endif
 #define SAMPLE_CODE_WAIT_PRIMES (90000)
 
 #define SAMPLE_CODE_WAIT_NONE (0)
@@ -290,18 +252,8 @@ typedef struct perf_data_s
  * application
  * on 64bit OS.
  * */
-#ifndef SAMPLE_KERNEL64_USER32
-#ifdef __x86_64__
 #define SAMPLE_CODE_UINT Cpa64U
 #define SAMPLE_CODE_INT Cpa64S
-#else
-#define SAMPLE_CODE_UINT Cpa32U
-#define SAMPLE_CODE_INT Cpa32S
-#endif
-#else
-#define SAMPLE_CODE_UINT Cpa32U
-#define SAMPLE_CODE_INT Cpa32S
-#endif
 
 /*add 2 sampe_code_time_t structs together*/
 #define SAMPLE_CODE_TIME_ADD(tvA, tvB)                                         \
@@ -329,9 +281,7 @@ typedef struct perf_data_s
         PRINT(args);                                                           \
     } while (0)
 
-
 #endif
-
 
 #define FUNC_ENTRY()
 #define FUNC_EXIT()

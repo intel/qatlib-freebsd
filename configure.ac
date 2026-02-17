@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([qatlib], [23.09.0], [qat@intel.com])
+AC_INIT([qatlib], [26.02.0], [qat@intel.com])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_MACRO_DIRS([m4])
 AC_CONFIG_HEADERS([config.h])
@@ -12,7 +12,7 @@ AM_INIT_AUTOMAKE([-Wall -Werror -Wno-portability foreign subdir-objects tar-pax]
 AM_SILENT_RULES([yes])
 AC_USE_SYSTEM_EXTENSIONS
 
-AC_SUBST([LIBQAT_VERSION], [1:0:0])
+AC_SUBST([LIBQAT_VERSION], [1:0:1])
 AC_SUBST([LIBUSDM_VERSION], [1:0:1])
 
 # Checks for programs.
@@ -96,7 +96,11 @@ AS_IF([test "x${PKGCONFIG}" = "x"],
     ]
 )
 
-AC_CHECK_PROG(YASM_BINARY, yasm, yes , no)
+AC_CHECK_PROG(NASM_BINARY, nasm, yes , no)
+
+if (test "${NASM_BINARY}" = "no"); then
+    AC_MSG_ERROR(Nasm not found)
+fi
 
 # SAMPLES
 AC_ARG_ENABLE(samples,

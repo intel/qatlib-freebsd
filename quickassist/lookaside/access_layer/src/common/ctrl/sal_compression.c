@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -204,8 +152,7 @@ SalCtrl_CompressionInit_CompData(icp_accel_dev_t *device,
             pCompService->comp_device_data.oddByteDecompInterim = CPA_FALSE;
             pCompService->comp_device_data.useDevRam =
                 ICP_QAT_FW_COMP_ENABLE_SECURE_RAM_USED_AS_INTMD_BUF;
-            pCompService->comp_device_data.enableDmm =
-                ICP_QAT_HW_COMPRESSION_DELAYED_MATCH_DISABLED;
+            pCompService->comp_device_data.enableDmm = CPA_FALSE;
 
             pCompService->comp_device_data.inflateContextSize =
                 DC_INFLATE_CONTEXT_SIZE;
@@ -256,8 +203,7 @@ SalCtrl_CompressionInit_CompData(icp_accel_dev_t *device,
                 DC_DEST_BUFFER_STA_MIN_SIZE;
             pCompService->comp_device_data.minOutputBuffSizeDynamic =
                 pCompService->comp_device_data.minOutputBuffSize;
-            pCompService->comp_device_data.enableDmm =
-                ICP_QAT_HW_COMPRESSION_DELAYED_MATCH_ENABLED;
+            pCompService->comp_device_data.enableDmm = CPA_TRUE;
 
             for (level = CPA_DC_L1; level <= CPA_DC_L12; level++)
             {
@@ -299,8 +245,7 @@ SalCtrl_CompressionInit_CompData(icp_accel_dev_t *device,
                 DC_DEST_BUFFER_STA_MIN_SIZE;
             pCompService->comp_device_data.minOutputBuffSizeDynamic =
                 pCompService->comp_device_data.minOutputBuffSize;
-            pCompService->comp_device_data.enableDmm =
-                ICP_QAT_HW_COMPRESSION_DELAYED_MATCH_ENABLED;
+            pCompService->comp_device_data.enableDmm = CPA_TRUE;
             for (level = CPA_DC_L1; level <= CPA_DC_L12; level++)
             {
                 switch (level)
@@ -343,8 +288,7 @@ SalCtrl_CompressionInit_CompData(icp_accel_dev_t *device,
                 pCompService->comp_device_data.useDevRam =
                     ICP_QAT_FW_COMP_ENABLE_SECURE_RAM_USED_AS_INTMD_BUF;
             }
-            pCompService->comp_device_data.enableDmm =
-                ICP_QAT_HW_COMPRESSION_DELAYED_MATCH_ENABLED;
+            pCompService->comp_device_data.enableDmm = CPA_TRUE;
             pCompService->comp_device_data.inflateContextSize =
                 DC_INFLATE_EH_CONTEXT_SIZE;
             pCompService->comp_device_data.highestHwCompressionDepth =
@@ -385,8 +329,7 @@ SalCtrl_CompressionInit_CompData(icp_accel_dev_t *device,
             pCompService->comp_device_data.oddByteDecompInterim = CPA_FALSE;
             pCompService->comp_device_data.useDevRam =
                 ICP_QAT_FW_COMP_ENABLE_SECURE_RAM_USED_AS_INTMD_BUF;
-            pCompService->comp_device_data.enableDmm =
-                ICP_QAT_HW_COMPRESSION_DELAYED_MATCH_ENABLED;
+            pCompService->comp_device_data.enableDmm = CPA_TRUE;
             pCompService->comp_device_data.inflateContextSize =
                 DC_INFLATE_CONTEXT_SIZE;
             pCompService->comp_device_data.highestHwCompressionDepth =
@@ -1547,6 +1490,7 @@ CpaStatus cpaDcInstanceGetInfo2(const CpaInstanceHandle instanceHandle,
     char keyStr[ADF_CFG_MAX_KEY_LEN_IN_BYTES] = { 0 };
     char valStr[ADF_CFG_MAX_VAL_LEN_IN_BYTES] = { 0 };
     char *section = DYN_SEC;
+    Cpa32S strSize = 0;
 
 #ifdef ICP_TRACE
     LAC_LOG2("Called with params (0x%lx, 0x%lx)\n",
@@ -1625,7 +1569,8 @@ CpaStatus cpaDcInstanceGetInfo2(const CpaInstanceHandle instanceHandle,
     pInstanceInfo2->isOffloaded = CPA_TRUE;
     /* Get the instance name and part name from the config file */
     dev = icp_adf_getAccelDevByAccelId(pCompressionService->pkgID);
-    if (NULL == dev)
+    if (NULL == dev ||
+        0 == strnlen(dev->deviceName, ADF_DEVICE_TYPE_LENGTH + 1))
     {
         LAC_LOG_ERROR("Can not find device for the instance\n");
         LAC_OS_BZERO(pInstanceInfo2, sizeof(CpaInstanceInfo2));
@@ -1650,23 +1595,17 @@ CpaStatus cpaDcInstanceGetInfo2(const CpaInstanceHandle instanceHandle,
     LAC_CHECK_STATUS(status);
     status = icp_adf_cfgGetParamValue(dev, section, keyStr, valStr);
     LAC_CHECK_STATUS(status);
-    strncpy((char *)pInstanceInfo2->instName,
-            valStr,
-            sizeof(pInstanceInfo2->instName) - 1);
-    pInstanceInfo2->instName[CPA_INST_NAME_SIZE - 1] = '\0';
 
-#if __GNUC__ >= 7
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-truncation"
-#endif
-    snprintf((char *)pInstanceInfo2->instID,
-             CPA_INST_ID_SIZE,
-             "%s_%s",
-             section,
-             valStr);
-#if __GNUC__ >= 7
-#pragma GCC diagnostic pop
-#endif
+    strSize = snprintf(
+        (char *)pInstanceInfo2->instName, CPA_INST_NAME_SIZE, "%s", valStr);
+    LAC_CHECK_PARAM_RANGE(strSize, 1, CPA_INST_NAME_SIZE);
+
+    strSize = snprintf((char *)pInstanceInfo2->instID,
+                       CPA_INST_ID_SIZE,
+                       "%s_%s",
+                       section,
+                       valStr);
+    LAC_CHECK_PARAM_RANGE(strSize, 1, CPA_INST_ID_SIZE);
 
     return CPA_STATUS_SUCCESS;
 }
@@ -1909,4 +1848,14 @@ CpaStatus icp_sal_cnv_simulate_error(CpaInstanceHandle dcInstance,
                                      CpaDcSessionHandle pSessionHandle)
 {
     return dcSetCnvError(dcInstance, pSessionHandle);
+}
+
+CpaStatus icp_sal_DcGetFileDescriptor(CpaInstanceHandle instanceHandle, int *fd)
+{
+    return CPA_STATUS_UNSUPPORTED;
+}
+
+CpaStatus icp_sal_DcPutFileDescriptor(CpaInstanceHandle instanceHandle, int fd)
+{
+    return CPA_STATUS_UNSUPPORTED;
 }

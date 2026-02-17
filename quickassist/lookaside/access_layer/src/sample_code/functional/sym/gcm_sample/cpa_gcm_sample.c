@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -73,102 +21,42 @@
 
 #include "cpa_sample_utils.h"
 
-#define TAG_LENGTH 8
+#define TAG_LENGTH 16
 #define AES_BLOCK_SIZE 16
 #define TIMEOUT_MS 5000 /* 5 seconds*/
 #define GCM_ENCRYPT_DIRECTION 0
 #define GCM_DECRYPT_DIRECTION 1
 
 extern int gDebugParam;
+static Cpa8U sampleKey[] = { 0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
+                             0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08,
+                             0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
+                             0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08 };
 
-static Cpa8U sampleKey[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
-                            0x99, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
-                            0x77, 0x88, 0x99, 0x00, 0x11, 0x22, 0x33, 0x44,
-                            0x55, 0x66, 0x77, 0x88, 0x99, 0x00, 0x11, 0x22};
+static Cpa8U sampleIv[] = { 0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce,
+                            0xdb, 0xad, 0xde, 0xca, 0xf8, 0x88 };
 
-static Cpa8U sampleIv[] =
-    {0xca, 0xfe, 0xca, 0xfe, 0xca, 0xfe, 0xca, 0xfe, 0xca, 0xfe, 0xca, 0xfe};
-
-static Cpa8U sampleAddAuthData[] = {0xde, 0xad, 0xde, 0xad, 0xde, 0xad, 0xde,
-                                    0xad, 0xde, 0xad, 0xde, 0xad, 0xde, 0xad,
-                                    0xde, 0xad, 0xde, 0xad, 0xde, 0xad};
+static Cpa8U sampleAddAuthData[] = { 0xfe, 0xed, 0xfa, 0xce, 0xde, 0xad, 0xbe,
+                                     0xef, 0xfe, 0xed, 0xfa, 0xce, 0xde, 0xad,
+                                     0xbe, 0xef, 0xab, 0xad, 0xda, 0xd2 };
 
 static Cpa8U samplePayload[] = {
-    0x79, 0x84, 0x86, 0x44, 0x68, 0x45, 0x15, 0x61, 0x86, 0x54, 0x66, 0x56,
-    0x54, 0x54, 0x31, 0x54, 0x64, 0x64, 0x68, 0x45, 0x15, 0x15, 0x61, 0x61,
-    0x51, 0x51, 0x51, 0x51, 0x51, 0x56, 0x14, 0x11, 0x72, 0x13, 0x51, 0x82,
-    0x84, 0x56, 0x74, 0x53, 0x45, 0x34, 0x65, 0x15, 0x46, 0x14, 0x67, 0x55,
-    0x16, 0x14, 0x67, 0x54, 0x65, 0x47, 0x14, 0x67, 0x46, 0x74, 0x65, 0x46};
+    0xd9, 0x31, 0x32, 0x25, 0xf8, 0x84, 0x06, 0xe5, 0xa5, 0x59, 0x09, 0xc5,
+    0xaf, 0xf5, 0x26, 0x9a, 0x86, 0xa7, 0xa9, 0x53, 0x15, 0x34, 0xf7, 0xda,
+    0x2e, 0x4c, 0x30, 0x3d, 0x8a, 0x31, 0x8a, 0x72, 0x1c, 0x3c, 0x0c, 0x95,
+    0x95, 0x68, 0x09, 0x53, 0x2f, 0xcf, 0x0e, 0x24, 0x49, 0xa6, 0xb5, 0x25,
+    0xb1, 0x6a, 0xed, 0xf5, 0xaa, 0x0d, 0xe6, 0x57, 0xba, 0x63, 0x7b, 0x39
+};
 
-static Cpa8U expectedOutput[] = {0x59,
-                                 0x85,
-                                 0x02,
-                                 0x97,
-                                 0xE0,
-                                 0x4D,
-                                 0xFC,
-                                 0x5C,
-                                 0x03,
-                                 0xCC,
-                                 0x83,
-                                 0x64,
-                                 0xCE,
-                                 0x28,
-                                 0x0B,
-                                 0x95,
-                                 0x78,
-                                 0xEC,
-                                 0x93,
-                                 0x40,
-                                 0xA1,
-                                 0x8D,
-                                 0x21,
-                                 0xC5,
-                                 0x48,
-                                 0x6A,
-                                 0x39,
-                                 0xBA,
-                                 0x4F,
-                                 0x4B,
-                                 0x8C,
-                                 0x95,
-                                 0x6F,
-                                 0x8C,
-                                 0xF6,
-                                 0x9C,
-                                 0xD0,
-                                 0xA5,
-                                 0x8D,
-                                 0x67,
-                                 0xA1,
-                                 0x32,
-                                 0x11,
-                                 0xE7,
-                                 0x2E,
-                                 0xF6,
-                                 0x63,
-                                 0xAF,
-                                 0xDE,
-                                 0xD4,
-                                 0x7D,
-                                 0xEC,
-                                 0x15,
-                                 0x01,
-                                 0x58,
-                                 0xCB,
-                                 0xE3,
-                                 0x7B,
-                                 0xC6,
-                                 0x94,
-                                 /* Tag */
-                                 0x5D,
-                                 0x10,
-                                 0x3F,
-                                 0xC7,
-                                 0x22,
-                                 0xC7,
-                                 0x21,
-                                 0x29};
+static Cpa8U expectedOutput[] = {
+    0x52, 0x2d, 0xc1, 0xf0, 0x99, 0x56, 0x7d, 0x07, 0xf4, 0x7f, 0x37, 0xa3,
+    0x2a, 0x84, 0x42, 0x7d, 0x64, 0x3a, 0x8c, 0xdc, 0xbf, 0xe5, 0xc0, 0xc9,
+    0x75, 0x98, 0xa2, 0xbd, 0x25, 0x55, 0xd1, 0xaa, 0x8c, 0xb0, 0x8e, 0x48,
+    0x59, 0x0d, 0xbb, 0x3d, 0xa7, 0xb0, 0x8b, 0x10, 0x56, 0x82, 0x88, 0x38,
+    0xc5, 0xf6, 0x1e, 0x63, 0x93, 0xba, 0x7a, 0x0a, 0xbc, 0xc9, 0xf6, 0x62,
+                                  /* Tag */
+    0x76, 0xfc, 0x6e, 0xce, 0x0f, 0x4e, 0x17, 0x68, 0xcd, 0xdf, 0x88, 0x53,
+    0xbb, 0x2d, 0x55, 0x1b };
 
 CpaStatus algChainSample(void);
 
@@ -237,6 +125,8 @@ static CpaStatus algChainPerformOpGCM(CpaInstanceHandle cyInstHandle,
      * until the callback comes back. If a non-blocking approach was to be
      * used then these variables should be dynamically allocated */
     struct COMPLETION_STRUCT complete;
+
+    COMPLETION_INIT(&complete); // Initialize the completion variable
 
     /* get meta information size */
     PRINT_DBG("cpaCyBufferListGetMetaSize\n");
@@ -337,10 +227,6 @@ static CpaStatus algChainPerformOpGCM(CpaInstanceHandle cyInstHandle,
 
     if (CPA_STATUS_SUCCESS == status)
     {
-        /** initialization for callback; the "complete" variable is used by the
-         * callback function to indicate it has been called*/
-        COMPLETION_INIT(&complete);
-
         PRINT_DBG("cpaCySymPerformOp\n");
 
         /** Perform symmetric operation */
@@ -426,7 +312,7 @@ CpaStatus algChainSample(void)
      * In this simplified version of instance discovery, we discover
      * exactly one instance of a crypto service.
      */
-    sampleCyGetInstance(&cyInstHandle);
+    sampleSymGetInstance(&cyInstHandle);
     if (cyInstHandle == NULL)
     {
         return CPA_STATUS_FAIL;

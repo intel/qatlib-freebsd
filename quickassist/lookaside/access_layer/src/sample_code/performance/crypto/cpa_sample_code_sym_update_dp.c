@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -93,9 +41,9 @@ Cpa32U symDpPollingInterval_g = SYM_DP_OPS_DEFAULT_POLLING_INTERVAL;
 
 #if CY_API_VERSION_AT_LEAST(2, 2)
 
-void symDpPerformUpdateCallback(CpaCySymDpOpData *pOpData,
-                                CpaStatus status,
-                                CpaBoolean verifyResult)
+static void symDpPerformUpdateCallback(CpaCySymDpOpData *pOpData,
+                                       CpaStatus status,
+                                       CpaBoolean verifyResult)
 {
     /* pCallbacktag in the pOpData structure is used to store
      * index of to the perf_data_t associated the thread */
@@ -108,7 +56,6 @@ void symDpPerformUpdateCallback(CpaCySymDpOpData *pOpData,
         pPerfData->endCyclesTimestamp = sampleCodeTimestamp();
     }
 }
-
 
 // Perform verify
 static CpaStatus performOpAndVerifyDp(CpaInstanceHandle cyInstHandle,
@@ -134,6 +81,24 @@ static CpaStatus performOpAndVerifyDp(CpaInstanceHandle cyInstHandle,
     CpaBoolean performNow = CPA_FALSE;
     Cpa64U numOps = 0;
     Cpa64U nextPoll = symDpPollingInterval_g;
+    CpaInstanceInfo2 *instanceInfo2 = NULL;
+
+    instanceInfo2 = qaeMemAlloc(sizeof(CpaInstanceInfo2));
+    if (instanceInfo2 == NULL)
+    {
+        PRINT_ERR("Failed to allocate memory for instanceInfo2");
+        return CPA_STATUS_FAIL;
+    }
+    memset(instanceInfo2, 0, sizeof(CpaInstanceInfo2));
+
+    // Get instance info
+    status = cpaCyInstanceGetInfo2(cyInstHandle, instanceInfo2);
+    if (CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("cpaCyInstanceGetInfo2 error, status: %d\n", status);
+        qaeMemFree((void **)&instanceInfo2);
+        return status;
+    }
 
 // Perform
 
@@ -157,7 +122,10 @@ static CpaStatus performOpAndVerifyDp(CpaInstanceHandle cyInstHandle,
             {
                 pSymData->retries++;
                 pSymData->pollCount++;
-                icp_sal_CyPollDpInstance(setup->cyInstanceHandle, 0);
+                if (CPA_TRUE == instanceInfo2->isPolled)
+                {
+                    icp_sal_CyPollDpInstance(setup->cyInstanceHandle, 0);
+                }
                 nextPoll = numOps + symDpPollingInterval_g;
                 AVOID_SOFTLOCKUP;
             }
@@ -171,7 +139,10 @@ static CpaStatus performOpAndVerifyDp(CpaInstanceHandle cyInstHandle,
         ++numOps;
         if (numOps == nextPoll)
         {
-            icp_sal_CyPollDpInstance(setup->cyInstanceHandle, 0);
+            if (CPA_TRUE == instanceInfo2->isPolled)
+            {
+                icp_sal_CyPollDpInstance(setup->cyInstanceHandle, 0);
+            }
             nextPoll = numOps + symDpPollingInterval_g;
         }
     }
@@ -204,7 +175,7 @@ static CpaStatus performOpAndVerifyDp(CpaInstanceHandle cyInstHandle,
         status = CPA_STATUS_FAIL;
     }
 
-
+    qaeMemFree((void **)&instanceInfo2);
     return status;
 }
 
@@ -829,6 +800,9 @@ static CpaStatus updatePerformDp(symmetric_test_params_t *setup)
     Cpa32U failCount = 0;
     CpaCySymSessionUpdateData sessionUpdate = {0};
     CpaCySymCapabilitiesInfo capInfo;
+    Cpa32U srcBufferCnt = 0;
+    Cpa32U dstBufferCnt = 0;
+    Cpa32U opDataCnt = 0;
 
     sampleCodeBarrier();
 
@@ -889,7 +863,6 @@ static CpaStatus updatePerformDp(symmetric_test_params_t *setup)
         return status;
     }
 
-
     // Alloc src
     if (CPA_STATUS_SUCCESS == status)
     {
@@ -922,6 +895,7 @@ static CpaStatus updatePerformDp(symmetric_test_params_t *setup)
                 {
                     generateRandomData(pSrcBuffer[innerLoop], srcBufferLen);
                 }
+                srcBufferCnt++;
             }
         }
     }
@@ -954,6 +928,7 @@ static CpaStatus updatePerformDp(symmetric_test_params_t *setup)
                     status = CPA_STATUS_FAIL;
                     break;
                 }
+                dstBufferCnt++;
             }
         }
     }
@@ -994,8 +969,16 @@ static CpaStatus updatePerformDp(symmetric_test_params_t *setup)
             if (setup->setupData.cipherSetupData.cipherAlgorithm ==
                 CPA_CY_SYM_CIPHER_AES_CCM)
             {
+                /* Although the IV data length for CCM must be 16 bytes,
+		 * the nonce length must be between 7 and 13 inclusive */
+                ivBufferLen = AES_CCM_DEFAULT_NONCE_LENGTH;
+                setup->ivLength = AES_CCM_DEFAULT_NONCE_LENGTH;
+
+                /* As per QAT API documentation, CCM IV allocation size should
+                 * be 16 bytes even if IV length is less than 16 bytes.
+                 */
                 pIvBuffer =
-                    qaeMemAllocNUMA(ivBufferLen, node, BYTE_ALIGNMENT_64);
+                    qaeMemAllocNUMA(IV_AES_BLOCK_SIZE, node, BYTE_ALIGNMENT_64);
                 if (NULL == pIvBuffer)
                 {
                     PRINT_ERR("Alloc iv failed\n");
@@ -1004,11 +987,7 @@ static CpaStatus updatePerformDp(symmetric_test_params_t *setup)
 
                 if (CPA_STATUS_SUCCESS == status)
                 {
-                    memset(pIvBuffer, 0, ivBufferLen);
-                    /*Although the IV data length for CCM must be 16 bytes,
-                      The nonce length must be between 7 and 13 inclusive*/
-                    ivBufferLen = AES_CCM_DEFAULT_NONCE_LENGTH;
-                    setup->ivLength = AES_CCM_DEFAULT_NONCE_LENGTH;
+                    memset(pIvBuffer, 0, IV_AES_BLOCK_SIZE);
                     /*generate a random IV*/
                     generateRandomData(&pIvBuffer[1], ivBufferLen);
                 }
@@ -1021,6 +1000,11 @@ static CpaStatus updatePerformDp(symmetric_test_params_t *setup)
                     PRINT_ERR("Alloc iv failed with status %u\n", status);
                 }
             }
+        }
+        else
+        {
+            PRINT_ERR("Invalid iv buffer length\n");
+            status = CPA_STATUS_FAIL;
         }
     }
 
@@ -1222,6 +1206,7 @@ static CpaStatus updatePerformDp(symmetric_test_params_t *setup)
                 }
                 /* Zero initialize Op data structure*/
                 memset(pOpData[innerLoop], 0, sizeof(CpaCySymDpOpData));
+                opDataCnt++;
             }
         }
     }
@@ -1415,10 +1400,16 @@ static CpaStatus updatePerformDp(symmetric_test_params_t *setup)
         status = sessionStatus;
     }
 
-    for (innerLoop = 0; innerLoop < setup->numBuffers; innerLoop++)
+    for (innerLoop = 0; innerLoop < srcBufferCnt; innerLoop++)
     {
         freeUpdateMem((void **)&pSrcBuffer[innerLoop]);
+    }
+    for (innerLoop = 0; innerLoop < dstBufferCnt; innerLoop++)
+    {
         freeUpdateMem((void **)&pDstBuffer[innerLoop]);
+    }
+    for (innerLoop = 0; innerLoop < opDataCnt; innerLoop++)
+    {
         freeUpdateMem((void **)&pOpData[innerLoop]);
     }
     freeUpdateMem((void **)&pSrcBuffer);
@@ -1435,7 +1426,8 @@ static CpaStatus updatePerformDp(symmetric_test_params_t *setup)
     return status;
 }
 
-void sampleSymmetricDpUpdatePerformance(single_thread_test_data_t *testSetup)
+static void sampleSymmetricDpUpdatePerformance(
+    single_thread_test_data_t *testSetup)
 {
     symmetric_test_params_t updateTestSetup;
     symmetric_test_params_t *pSetup =

@@ -1,7 +1,4 @@
 ===============================================================================
-
-
-September 2023
 ===============================================================================
 
 
@@ -76,7 +73,7 @@ Compilation and installation - quickstart instructions
     Summary if building from sources.
 
         # Install dependencies
-        pkg install automake autoconf libtool yasm
+        pkg install automake autoconf libtool nasm
 
         # Clone QATlib into ~/qatlib-freebsd, i.e. in your root home dir
         cd ~
@@ -118,7 +115,7 @@ Compilation and installation - detailed instructions
             clang
             make
             autotools (automake, autoconf, libtool)
-            yasm
+            nasm
 
         libraries:
             openssl
@@ -315,6 +312,6 @@ not intended for use in medical, life saving, life sustaining, critical control
 Intel may make changes to specifications and product descriptions at any time,
 without notice.
 
-(C) Intel Corporation 2023
+(C) Intel Corporation 2026
 
 ===============================================================================

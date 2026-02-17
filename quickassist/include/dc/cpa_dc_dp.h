@@ -1,62 +1,10 @@
 /***************************************************************************
  *
- * This file is provided under a dual BSD/GPLv2 license.  When using or
- *   redistributing this file, you may do so under either license.
+ *   SPDX-License-Identifier: BSD-3-Clause
+ *   Copyright(c) 2007-2026 Intel Corporation
  * 
- *   GPL LICENSE SUMMARY
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- * 
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of version 2 of the GNU General Public License as
- *   published by the Free Software Foundation.
- * 
- *   This program is distributed in the hope that it will be useful, but
- *   WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *   General Public License for more details.
- * 
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *   The full GNU General Public License is included in this distribution
- *   in the file called LICENSE.GPL.
- * 
- *   Contact Information:
- *   Intel Corporation
- * 
- *   BSD LICENSE
- * 
- *   Copyright(c) 2007-2023 Intel Corporation. All rights reserved.
- *   All rights reserved.
- * 
- *   Redistribution and use in source and binary forms, with or without
- *   modification, are permitted provided that the following conditions
- *   are met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- * 
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * 
+ *   These contents may have been developed with support from one or more
+ *   Intel-operated generative artificial intelligence solutions.
  *
  ***************************************************************************/
 
@@ -126,20 +74,21 @@ extern "C" {
  *      specific chunk of decompression data.
  *
  ****************************************************************************/
-typedef struct _CpaDcDpPartialReadData {
-        Cpa32U bufferOffset;
-        /**< Number of bytes to skip in a destination buffer (or buffers list)
-         * before writing. At this point only zero is supported.
-         */
-        Cpa32U dataOffset;
-        /**< The offset in the decompressed data of the first byte written to
-         * the destination buffer. The data offset length should be an integer
-         * multiple of 4KB in order to achieve the best performance.
-         */
-        Cpa32U length;
-        /**< Size of requested decompressed data chunk. The length should be
-         * an integer multiple of 4KB in order to achieve the best performance.
-         */
+typedef struct _CpaDcDpPartialReadData
+{
+    Cpa32U bufferOffset;
+    /**< Number of bytes to skip in the destination buffer (or buffers list)
+     * before writing. At this point only zero is supported.
+     */
+    Cpa32U dataOffset;
+    /**< The offset in the decompressed data of the first byte written to
+     * the destination buffer. The data offset length should be an integer
+     * multiple of 4KB in order to achieve the best performance.
+     */
+    Cpa32U length;
+    /**< Size in bytes of requested decompressed data chunk. The length should be
+     * an integer multiple of 4KB in order to achieve the best performance.
+     */
 } CpaDcDpPartialReadData;
 
 /**
@@ -162,45 +111,45 @@ typedef struct _CpaDcDpPartialReadData {
  ****************************************************************************/
 typedef struct _CpaDcDpOpData
 {
-    Cpa64U          reserved0;
+    Cpa64U reserved0;
     /**< Reserved for internal use.  Source code should not read or write
-      * this field.
-      */
-    Cpa32U          bufferLenToCompress;
+     * this field.
+     */
+    Cpa32U bufferLenToCompress;
     /**< The number of bytes from the source buffer to compress.  This must be
      * less than, or more typically equal to, the total size of the source
      * buffer (or buffer list).
      */
 
-    Cpa32U          bufferLenForData;
+    Cpa32U bufferLenForData;
     /**< The maximum number of bytes that should be written to the destination
      * buffer.  This must be less than, or more typically equal to, the total
      * size of the destination buffer (or buffer list).
      */
 
-    Cpa64U          reserved1;
+    Cpa64U reserved1;
     /**< Reserved for internal use.  Source code should not read or write */
 
-    Cpa64U          reserved2;
+    Cpa64U reserved2;
     /**< Reserved for internal use.  Source code should not read or write */
 
-    Cpa64U          reserved3;
+    Cpa64U reserved3;
     /**< Reserved for internal use.  Source code should not read or write */
 
-    CpaDcRqResults      results;
+    CpaDcRqResults results;
     /**< Results of the operation.  Contents are valid upon completion. */
 
-    CpaInstanceHandle   dcInstance;
+    CpaInstanceHandle dcInstance;
     /**< Instance to which the request is to be enqueued */
 
-    CpaDcSessionHandle  pSessionHandle;
+    CpaDcSessionHandle pSessionHandle;
     /**< DC Session associated with the stream of requests.
      * This field is only valid when using the session based API functions.
      * This field must be set to NULL if the application wishes to use
      * the No-Session (Ns) API.
      */
 
-    CpaPhysicalAddr     srcBuffer;
+    CpaPhysicalAddr srcBuffer;
     /**< Physical address of the source buffer on which to operate.
      * This is either the location of the data, of length srcBufferLen; or,
      * if srcBufferLen has the special value @ref CPA_DP_BUFLIST, then
@@ -208,14 +157,14 @@ typedef struct _CpaDcDpOpData
      * stored.
      */
 
-    Cpa32U          srcBufferLen;
+    Cpa32U srcBufferLen;
     /**< If the source buffer is a "flat buffer", then this field
      * specifies the size of the buffer, in bytes. If the source buffer
      * is a "buffer list" (of type @ref CpaPhysBufferList), then this field
      * should be set to the value @ref CPA_DP_BUFLIST.
      */
 
-    CpaPhysicalAddr     destBuffer;
+    CpaPhysicalAddr destBuffer;
     /**< Physical address of the destination buffer on which to operate.
      * This is either the location of the data, of length destBufferLen; or,
      * if destBufferLen has the special value @ref CPA_DP_BUFLIST, then
@@ -223,7 +172,7 @@ typedef struct _CpaDcDpOpData
      * stored.
      */
 
-    Cpa32U          destBufferLen;
+    Cpa32U destBufferLen;
     /**< If the destination buffer is a "flat buffer", then this field
      * specifies the size of the buffer, in bytes.  If the destination buffer
      * is a "buffer list" (of type @ref CpaPhysBufferList), then this field
@@ -231,10 +180,10 @@ typedef struct _CpaDcDpOpData
      */
 
     CpaDcSessionDir sessDirection;
-     /**<Session direction indicating whether session is used for
-      * compression, decompression.  For the DP implementation,
-      * CPA_DC_DIR_COMBINED is not a valid selection.
-      */
+    /**<Session direction indicating whether session is used for
+     * compression, decompression.  For the DP implementation,
+     * CPA_DC_DIR_COMBINED is not a valid selection.
+     */
 
     CpaBoolean compressAndVerify;
     /**< If set to true, for compression operations, the implementation
@@ -261,7 +210,7 @@ typedef struct _CpaDcDpOpData
     CpaPhysicalAddr thisPhys;
     /**< Physical address of this data structure */
 
-    void* pCallbackTag;
+    void *pCallbackTag;
     /**< Opaque data that will be returned to the client in the function
      * completion callback.
      *
@@ -271,7 +220,7 @@ typedef struct _CpaDcDpOpData
      * processing the response later.
      */
 
-    CpaDcNsSetupData    *pSetupData;
+    CpaDcNsSetupData *pSetupData;
     /**< Pointer to the No-session (Ns) Setup data for configuration of this
      * request.
      *
@@ -371,8 +320,8 @@ typedef void (*CpaDcDpCallbackFn)(CpaDcDpOpData *pOpData);
  *      Only a synchronous version of this function is provided.
  *
  *      Session data is expected to include interim checksum values, various
- *      counters and other session related data that needs to persist between
- *      invocations.
+ *      counters and other other session related data that needs to persist
+ *      between invocations.
  *      For a given implementation of this API, it is safe to assume that
  *      cpaDcDpGetSessionSize() will always return the same session size and
  *      that the size will not be different for different setup data
@@ -386,11 +335,9 @@ typedef void (*CpaDcDpCallbackFn)(CpaDcDpOpData *pOpData);
  *      cpaDcDpInitSession()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcDpGetSessionSize(CpaInstanceHandle dcInstance,
-        CpaDcSessionSetupData* pSessionData,
-        Cpa32U* pSessionSize );
-
+CpaStatus cpaDcDpGetSessionSize(CpaInstanceHandle dcInstance,
+                                CpaDcSessionSetupData *pSessionData,
+                                Cpa32U *pSessionSize);
 
 /**
  *****************************************************************************
@@ -464,11 +411,9 @@ cpaDcDpGetSessionSize(CpaInstanceHandle dcInstance,
  *      None
  *
  *****************************************************************************/
-CpaStatus
-cpaDcDpInitSession( CpaInstanceHandle       dcInstance,
-        CpaDcSessionHandle              pSessionHandle,
-        CpaDcSessionSetupData           *pSessionData );
-
+CpaStatus cpaDcDpInitSession(CpaInstanceHandle dcInstance,
+                             CpaDcSessionHandle pSessionHandle,
+                             CpaDcSessionSetupData *pSessionData);
 
 /**
  *****************************************************************************
@@ -525,9 +470,9 @@ cpaDcDpInitSession( CpaInstanceHandle       dcInstance,
  *      cpaDcDpInitSession()
  *
  *****************************************************************************/
-CpaStatus cpaDcDpUpdateSession( const CpaInstanceHandle dcInstance,
-        CpaDcSessionHandle pSessionHandle,
-        CpaDcSessionUpdateData *pSessionUpdateData );
+CpaStatus cpaDcDpUpdateSession(const CpaInstanceHandle dcInstance,
+                               CpaDcSessionHandle pSessionHandle,
+                               CpaDcSessionUpdateData *pSessionUpdateData);
 
 /**
  *****************************************************************************
@@ -580,9 +525,8 @@ CpaStatus cpaDcDpUpdateSession( const CpaInstanceHandle dcInstance,
  *      @ref cpaDcDpInitSession
  *
  *****************************************************************************/
-CpaStatus
-cpaDcDpRemoveSession(const CpaInstanceHandle dcInstance,
-        CpaDcSessionHandle pSessionHandle );
+CpaStatus cpaDcDpRemoveSession(const CpaInstanceHandle dcInstance,
+                               CpaDcSessionHandle pSessionHandle);
 
 /**
  *****************************************************************************
@@ -628,7 +572,7 @@ cpaDcDpRemoveSession(const CpaInstanceHandle dcInstance,
  *      cpaDcDpCbFunc
  *****************************************************************************/
 CpaStatus cpaDcDpRegCbFunc(const CpaInstanceHandle dcInstance,
-        const CpaDcDpCallbackFn pNewCb);
+                           const CpaDcDpCallbackFn pNewCb);
 
 /**
  *****************************************************************************
@@ -709,9 +653,8 @@ CpaStatus cpaDcDpRegCbFunc(const CpaInstanceHandle dcInstance,
  * @see
  *      @ref cpaDcDpPerformOpNow
  *****************************************************************************/
-CpaStatus
-cpaDcDpEnqueueOp(CpaDcDpOpData *pOpData,
-        const CpaBoolean performOpNow);
+CpaStatus cpaDcDpEnqueueOp(CpaDcDpOpData *pOpData,
+                           const CpaBoolean performOpNow);
 
 /**
  *****************************************************************************
@@ -722,9 +665,9 @@ cpaDcDpEnqueueOp(CpaDcDpOpData *pOpData,
  * @description
  *      This function enqueues a single request to perform a decompression
  *      operation and allows to specify particular region of decompressed
- *      data to be placed in to the destination buffer (or buffer list).
+ *      data to be placed in the destination buffer (or buffer list).
  *
- *      The function is asynchronous; control is returned to the user once
+ *      The function is asynchronous. The control is returned to the user once
  *      the request has been submitted. On completion of the request, the
  *      application may poll for responses, which will cause a callback
  *      function (registered via @ref cpaDcDpRegCbFunc) to be invoked.
@@ -784,10 +727,9 @@ cpaDcDpEnqueueOp(CpaDcDpOpData *pOpData,
  * @see
  *      @ref cpaDcDpPerformOpNow
  *****************************************************************************/
-CpaStatus
-cpaDcDpEnqueueOpWithPartRead(CpaDcDpOpData *pOpData,
-        CpaDcDpPartialReadData *pPartReadData,
-        const CpaBoolean performOpNow);
+CpaStatus cpaDcDpEnqueueOpWithPartRead(CpaDcDpOpData *pOpData,
+                                       CpaDcDpPartialReadData *pPartReadData,
+                                       const CpaBoolean performOpNow);
 
 /**
  *****************************************************************************
@@ -800,7 +742,7 @@ cpaDcDpEnqueueOpWithPartRead(CpaDcDpOpData *pOpData,
  *      operation with zero-filling leftover bytes with 4KB alignment
  *      in the destination buffer (or buffer list).
  *
- *      The function is asynchronous; control is returned to the user once
+ *      The function is asynchronous. The control is returned to the user once
  *      the request has been submitted. On completion of the request, the
  *      application may poll for responses, which will cause a callback
  *      function (registered via @ref cpaDcDpRegCbFunc) to be invoked.
@@ -856,9 +798,8 @@ cpaDcDpEnqueueOpWithPartRead(CpaDcDpOpData *pOpData,
  * @see
  *      @ref cpaDcDpPerformOpNow
  *****************************************************************************/
-CpaStatus
-cpaDcDpEnqueueOpWithZeroPad(CpaDcDpOpData *pOpData,
-        const CpaBoolean performOpNow);
+CpaStatus cpaDcDpEnqueueOpWithZeroPad(CpaDcDpOpData *pOpData,
+                                      const CpaBoolean performOpNow);
 
 /**
  *****************************************************************************
@@ -951,10 +892,9 @@ cpaDcDpEnqueueOpWithZeroPad(CpaDcDpOpData *pOpData,
  * @see
  *      cpaDcDpEnqueueOp
  *****************************************************************************/
-CpaStatus
-cpaDcDpEnqueueOpBatch(const Cpa32U numberRequests,
-        CpaDcDpOpData *pOpData[],
-        const CpaBoolean performOpNow);
+CpaStatus cpaDcDpEnqueueOpBatch(const Cpa32U numberRequests,
+                                CpaDcDpOpData *pOpData[],
+                                const CpaBoolean performOpNow);
 
 /**
  *****************************************************************************
@@ -965,11 +905,11 @@ cpaDcDpEnqueueOpBatch(const Cpa32U numberRequests,
  * @description
  *      This function enqueues multiple requests to perform decompression
  *      operations and allows to specify particular region of decompressed
- *      data to be placed in to the destination buffer (or buffer list) for
+ *      data to be placed in the destination buffer (or buffer list) for
  *      each individual request.
  *
- *      The function is asynchronous; control is returned to the user once
- *      the request has been submitted.  On completion of the request, the
+ *      The function is asynchronous. The control is returned to the user once
+ *      the request has been submitted. On completion of the request, the
  *      application may poll for responses, which will cause a callback
  *      function (registered via @ref cpaDcDpRegCbFunc) to be invoked.
  *      Separate callbacks will be invoked for each request.
@@ -1038,11 +978,11 @@ cpaDcDpEnqueueOpBatch(const Cpa32U numberRequests,
  * @see
  *      @ref cpaDcDpEnqueueOp
  *****************************************************************************/
-CpaStatus
-cpaDcDpEnqueueOpWithPartReadBatch(const Cpa32U numberRequests,
-        CpaDcDpOpData *pOpData[],
-        CpaDcDpPartialReadData *pPartReadData[],
-        const CpaBoolean performOpNow);
+CpaStatus cpaDcDpEnqueueOpWithPartReadBatch(
+    const Cpa32U numberRequests,
+    CpaDcDpOpData *pOpData[],
+    CpaDcDpPartialReadData *pPartReadData[],
+    const CpaBoolean performOpNow);
 
 /**
  *****************************************************************************
@@ -1057,8 +997,8 @@ cpaDcDpEnqueueOpWithPartReadBatch(const Cpa32U numberRequests,
  *      Please note that optional zero-filling leftover output buffer bytes
  *      is aligned to 4KB.
  *
- *      The function is asynchronous; control is returned to the user once
- *      the request has been submitted.  On completion of the request, the
+ *      The function is asynchronous. The control is returned to the user once
+ *      the request has been submitted. On completion of the request, the
  *      application may poll for responses, which will cause a callback
  *      function (registered via @ref cpaDcDpRegCbFunc) to be invoked.
  *      Separate callbacks will be invoked for each request.
@@ -1123,10 +1063,9 @@ cpaDcDpEnqueueOpWithPartReadBatch(const Cpa32U numberRequests,
  * @see
  *      @ref cpaDcDpEnqueueOp
  *****************************************************************************/
-CpaStatus
-cpaDcDpEnqueueOpWithZeroPadBatch(const Cpa32U numberRequests,
-        CpaDcDpOpData *pOpData[],
-        const CpaBoolean performOpNow);
+CpaStatus cpaDcDpEnqueueOpWithZeroPadBatch(const Cpa32U numberRequests,
+                                           CpaDcDpOpData *pOpData[],
+                                           const CpaBoolean performOpNow);
 
 /**
  *****************************************************************************
@@ -1174,8 +1113,7 @@ cpaDcDpEnqueueOpWithZeroPadBatch(const Cpa32U numberRequests,
  * @see
  *      cpaDcDpEnqueueOp, cpaDcDpEnqueueOpBatch
  *****************************************************************************/
-CpaStatus
-cpaDcDpPerformOpNow(CpaInstanceHandle dcInstance);
+CpaStatus cpaDcDpPerformOpNow(CpaInstanceHandle dcInstance);
 
 /**
  *****************************************************************************
@@ -1218,9 +1156,8 @@ cpaDcDpPerformOpNow(CpaInstanceHandle dcInstance);
  *      cpaDcQueryCapabilities()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcDpIsPartReadSupported(const CpaInstanceHandle instanceHandle,
-        CpaBoolean *pFlag);
+CpaStatus cpaDcDpIsPartReadSupported(const CpaInstanceHandle instanceHandle,
+                                     CpaBoolean *pFlag);
 
 /**
  *****************************************************************************
@@ -1263,14 +1200,11 @@ cpaDcDpIsPartReadSupported(const CpaInstanceHandle instanceHandle,
  *      cpaDcQueryCapabilities()
  *
  *****************************************************************************/
-CpaStatus
-cpaDcDpIsZeroPadSupported(const CpaInstanceHandle instanceHandle,
-        CpaBoolean *pFlag);
-
+CpaStatus cpaDcDpIsZeroPadSupported(const CpaInstanceHandle instanceHandle,
+                                    CpaBoolean *pFlag);
 
 #ifdef __cplusplus
 } /* close the extern "C" { */
 #endif
 
 #endif /* CPA_DC_DP_H */
-
